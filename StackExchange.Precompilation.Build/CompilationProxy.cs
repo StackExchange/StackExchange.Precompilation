@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace StackExchange.Precompiler
+namespace StackExchange.Precompilation
 {
     class CompilationProxy : MarshalByRefObject
     {

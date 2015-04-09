@@ -7,7 +7,7 @@
     <ProjectGuid>{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>StackExchange.Precompiler</RootNamespace>
+    <RootNamespace>StackExchange.Precompilation</RootNamespace>
     <AssemblyName>StackExchange.Precompiler</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -115,9 +115,7 @@
   <ItemGroup>
     <Compile Include="CompilationFailedException.cs" />
     <Compile Include="CompilationProxy.cs" />
-    <Compile Include="ICompileModule.cs" />
     <Compile Include="Compilation.cs" />
-    <Compile Include="PrecompilerSection.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -125,15 +123,21 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="StackExchange.Precompiler.Build.nuspec">
+    <None Include="StackExchange.Precompilation.Build.nuspec">
       <SubType>Designer</SubType>
     </None>
-    <None Include="StackExchange.Precompiler.Build.targets">
+    <None Include="StackExchange.Precompilation.Build.targets">
       <SubType>Designer</SubType>
     </None>
     <None Include="packages.config">
       <SubType>Designer</SubType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StackExchange.Precompilation.Metaprogramming\StackExchange.Precompilation.Metaprogramming.csproj">
+      <Project>{E42F58D0-658F-4EB8-A031-45DE998F769D}</Project>
+      <Name>StackExchange.Precompilation.Metaprogramming</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

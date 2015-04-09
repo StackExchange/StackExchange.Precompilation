@@ -3,7 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Microsoft.CodeAnalysis.CSharp;
-namespace StackExchange.Precompiler
+
+namespace StackExchange.Precompilation
 {
     public static class Program
     {

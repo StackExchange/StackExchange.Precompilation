@@ -14,7 +14,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 
-namespace StackExchange.Precompiler
+namespace StackExchange.Precompilation
 {
     class Compilation
     {

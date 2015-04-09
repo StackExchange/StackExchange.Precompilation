@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace StackExchange.Precompiler
+namespace StackExchange.Precompilation
 {
     [Serializable]
     public class CompilationFailedException : Exception

@@ -1,0 +1,36 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <!-- CREDITS:
+                https://razorgenerator.codeplex.com/SourceControl/latest#RazorGenerator.MsBuild/RazorGenerator.MsBuild.targets
+                http://www.nuget.org/packages/Microsoft.Net.ToolsetCompilers -> /tools/Microsoft.Net.ToolsetCompilers.props
+        -->
+        <SEPrecompilerSkip Condition="'$(SEPrecompilerSkip)' == ''">false</SEPrecompilerSkip>
+        <SEPrecompilerIncludeRazor Condition="'$(SEPrecompilerIncludeRazor)' == ''">false</SEPrecompilerIncludeRazor>
+        <CompileDependsOn>
+            $(CompileDependsOn);
+            SEPrecompilerCore;
+        </CompileDependsOn> 
+        <SEPrecompilerTools>$(MSBuildThisFileDirectory)..\tools</SEPrecompilerTools>
+    </PropertyGroup>
+    <Target Name="SEPrecompilerSetup">
+        <PropertyGroup>
+            <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SEPrecompilerTools)</SEPrecompilerPath>
+            <SEPrecompilerCscToolPath>$(SEPrecompilerPath)</SEPrecompilerCscToolPath>
+            <SEPrecompilerCscToolExe>StackExchange.Precompiler.exe</SEPrecompilerCscToolExe>
+        </PropertyGroup>
+    </Target>
+    <Target Name="SEPrecompilerCore"
+            BeforeTargets="CoreCompile"
+            AfterTargets="AfterResolveReferences"
+            Condition="'$(BuildingProject)' == 'true' and '$(SEPrecompilerSkip)' != 'true'"
+            DependsOnTargets="SEPrecompilerSetup">
+        <PropertyGroup>
+            <CscToolPath>$(SEPrecompilerCscToolPath)</CscToolPath>
+            <CscToolExe>$(SEPrecompilerCscToolExe)</CscToolExe>
+        </PropertyGroup>
+        <ItemGroup>
+            <Compile Include="@(Content)" Condition="'$(SEPrecompilerIncludeRazor)' == 'true' and '%(Extension)' == '.cshtml'" />
+            <Compile Include="@(None)"    Condition="'$(SEPrecompilerIncludeRazor)' == 'true' and '%(Extension)' == '.cshtml'" />
+        </ItemGroup>
+    </Target>
+</Project>
