@@ -14,8 +14,6 @@
     </dependencies>
   </metadata>
   <files>
-      <file src="bin\Release\StackExchange.Precompilation.pdb" target="lib\net45" />
-      <file src="bin\Release\StackExchange.Precompilation.dll" target="lib\net45" />
-      <file src="bin\Release\StackExchange.Precompilation.xml" target="lib\net45" />
+      <file src="bin\Release\StackExchange.Precompilation.*" target="lib\net45" />
   </files>
 </package>
