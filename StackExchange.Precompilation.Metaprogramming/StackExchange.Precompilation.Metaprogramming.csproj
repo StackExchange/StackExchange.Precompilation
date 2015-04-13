@@ -69,6 +69,7 @@
     <Compile Include="IAfterCompileContext.cs" />
     <Compile Include="IBeforeCompileContext.cs" />
     <Compile Include="ICompileModule.cs" />
+    <Compile Include="PrecompilationExtensions.cs" />
     <Compile Include="PrecompilerSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

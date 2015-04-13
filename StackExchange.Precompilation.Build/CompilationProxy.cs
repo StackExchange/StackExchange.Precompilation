@@ -21,7 +21,7 @@ namespace StackExchange.Precompilation
                 ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
                 ConfigurationFile = Path.Combine(Directory.GetCurrentDirectory(), "web.config"),
             };
-            CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), "csMoonSpeak"); // MAGIC STRING ALERT
+            CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), PrecompilationExtensions.CsCompilationAppDomainName);
         }
 
         private void RunCs(string baseDirectory, string[] args)
