@@ -61,8 +61,6 @@ namespace StackExchange.Precompilation
                 syntaxTrees: sources,
                 assemblyName: _cscArgs.CompilationName);
 
-            _diagnostics.AddRange(compilation.GetDiagnostics());
-
             var context = new BeforeCompileContext()
             {
                 Modules = compilationModules,
