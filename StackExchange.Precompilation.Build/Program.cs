@@ -28,8 +28,12 @@ namespace StackExchange.Precompilation
                         }
                         PrintHelp(true);
                     }
+
                     Console.WriteLine("Starting in csc mode");
-                    CompilationProxy.RunCs(cscArgs, args);
+                    if (!CompilationProxy.RunCs(cscArgs, args))
+                    {
+                        Environment.ExitCode = 1;
+                    }
                 }
             }
             catch (Exception ex)

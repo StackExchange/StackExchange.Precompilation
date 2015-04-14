@@ -13,7 +13,7 @@ namespace StackExchange.Precompilation
             Console.SetError(error);
         }
 
-        public static void RunCs(CSharpCommandLineArguments cscArgs, string[] args)
+        public static bool RunCs(CSharpCommandLineArguments cscArgs, string[] args)
         {
             var setup = new AppDomainSetup
             {
@@ -21,32 +21,35 @@ namespace StackExchange.Precompilation
                 ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
                 ConfigurationFile = Path.Combine(Directory.GetCurrentDirectory(), "web.config"),
             };
-            CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), PrecompilationExtensions.CsCompilationAppDomainName);
+            return CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), PrecompilationExtensions.CsCompilationAppDomainName);
         }
 
-        private void RunCs(string baseDirectory, string[] args)
+        private bool RunCs(string baseDirectory, string[] args)
         {
             var cscArgs = CSharpCommandLineParser.Default.Parse(args, baseDirectory);
-            new Compilation(cscArgs, new DirectoryInfo(Directory.GetCurrentDirectory())).Run();
+            return new Compilation(cscArgs, new DirectoryInfo(Directory.GetCurrentDirectory())).Run();
         }
 
-        private static void CompileInDomain(AppDomainSetup setup, Action<CompilationProxy> action, string appDomainName = null)
+        private static bool CompileInDomain(AppDomainSetup setup, Func<CompilationProxy, bool> compile, string appDomainName)
         {
             AppDomain compilationDomain = null;
+            bool success = false;
             try
             {
                 compilationDomain = AppDomain.CreateDomain(
-                    appDomainName ?? "Compilation Domain",
+                    appDomainName,
                     AppDomain.CurrentDomain.Evidence,
                     setup
                     );
-                action(InitProxy(compilationDomain));
+                var proxy = InitProxy(compilationDomain);
+                success = compile(proxy);
             }
             finally
             {
                 // runtime has exited, finish off by unloading the runtime appdomain
                 if (compilationDomain != null) AppDomain.Unload(compilationDomain);
             }
+            return success;
         }
 
         private static CompilationProxy InitProxy(AppDomain compilationDomain)

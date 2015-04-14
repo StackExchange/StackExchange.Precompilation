@@ -10,9 +10,11 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Configuration;
 using System.Web.Razor;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.Emit;
 
 namespace StackExchange.Precompilation
 {
@@ -22,9 +24,22 @@ namespace StackExchange.Precompilation
         private readonly DirectoryInfo _currentDirectory;
         private readonly Encoding _encoding;
         private readonly WebConfigurationFileMap _configMap;
+        private readonly List<Diagnostic> _diagnostics;
+
+        private const string DiagnosticCategory = "StackExchange.Precompilation";
+        private static DiagnosticDescriptor FailedToCreateModule =
+            new DiagnosticDescriptor("SE001", "Failed to instantiate ICompileModule", "Failed to instantiate ICompileModule '{0}': {1}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        private static DiagnosticDescriptor UnknownFileType =
+            new DiagnosticDescriptor("SE002", "Unknown file type", "Unknown file type '{0}'", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        private static DiagnosticDescriptor ViewGenerationFailed =
+            new DiagnosticDescriptor("SE003", "View generation failed", "View generation failed: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        private static DiagnosticDescriptor FailedParsingSourceTree =
+            new DiagnosticDescriptor("SE004", "Failed parsing source tree", "Failed parasing source tree: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+
 
         public Compilation(CSharpCommandLineArguments cscArgs, DirectoryInfo currentDirectory, Encoding defaultEncoding = null)
         {
+            _diagnostics = new List<Diagnostic>();
             _cscArgs = cscArgs;
             _currentDirectory = currentDirectory;
             _encoding = _cscArgs.Encoding ?? defaultEncoding ?? Encoding.UTF8;
@@ -34,13 +49,12 @@ namespace StackExchange.Precompilation
             AppDomain.CurrentDomain.SetData("DataDirectory", Path.Combine(currentDirectory.FullName, "App_Data")); // HACK mocking ASP.NET's ~/App_Data aka. |DataDirectory|
         }
 
-        public void Run()
+        public bool Run()
         {
             var references = SetupReferences();
             var sources = LoadSources(_cscArgs.SourceFiles.Select(x => x.Path).ToArray());
 
-            var diagnostics = new List<Diagnostic>();
-            var compilationModules = LoadModules(diagnostics).ToList();
+            var compilationModules = LoadModules().ToList();
 
             var compilation = CSharpCompilation.Create(
                 options: _cscArgs.CompilationOptions,
@@ -48,14 +62,14 @@ namespace StackExchange.Precompilation
                 syntaxTrees: sources,
                 assemblyName: _cscArgs.CompilationName);
 
-            diagnostics.AddRange(compilation.GetDiagnostics());
+            _diagnostics.AddRange(compilation.GetDiagnostics());
 
             var context = new BeforeCompileContext()
             {
                 Modules = compilationModules,
                 Arguments = _cscArgs,
                 Compilation = compilation,
-                Diagnostics = diagnostics,
+                Diagnostics = _diagnostics,
                 Resources = _cscArgs.ManifestResources.ToList()
             };
 
@@ -64,10 +78,14 @@ namespace StackExchange.Precompilation
                 module.BeforeCompile(context);
             }
 
-            Emit(context);
+            var emitResult = Emit(context);
+
+            _diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
+
+            return emitResult.Success;
         }
 
-        private IEnumerable<ICompileModule> LoadModules(List<Diagnostic> diagnostics)
+        private IEnumerable<ICompileModule> LoadModules()
         {
             var compilationSection = PrecompilerSection.Current;
             if (compilationSection == null) yield break;
@@ -82,8 +100,8 @@ namespace StackExchange.Precompilation
                 }
                 catch(Exception ex)
                 {
-                    diagnostics.Add(Diagnostic.Create(
-                        new DiagnosticDescriptor("MOONCOMP001", "MOONCOMP001", "Failed to create ICompileModule implementation '{0}': {1}", "MoonSpeak.Compilation", DiagnosticSeverity.Error, true),
+                    _diagnostics.Add(Diagnostic.Create(
+                        FailedToCreateModule,
                         Location.Create(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile, new TextSpan(), new LinePositionSpan()),
                         module.Type,
                         ex.Message));
@@ -95,7 +113,7 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private void Emit(BeforeCompileContext beforeContext)
+        private EmitResult Emit(BeforeCompileContext beforeContext)
         {
             var compilation = beforeContext.Compilation;
             var pdbPath = _cscArgs.PdbPath;
@@ -127,13 +145,13 @@ namespace StackExchange.Precompilation
                     manifestResources: _cscArgs.ManifestResources,
                     win32Resources: win32Resources);
 
-                ((List<Diagnostic>)beforeContext.Diagnostics).AddRange(emitResult.Diagnostics);
+                _diagnostics.AddRange(emitResult.Diagnostics);
                 var afterContext = new AfterCompileContext
                 {
                     Arguments = _cscArgs,
                     AssemblyStream = peStream,
                     Compilation = compilation,
-                    Diagnostics = beforeContext.Diagnostics,
+                    Diagnostics = _diagnostics,
                     SymbolStream = pdbStream,
                     XmlDocStream = xmlDocumentationStream,
                 };
@@ -143,14 +161,7 @@ namespace StackExchange.Precompilation
                     module.AfterCompile(afterContext);
                 }
 
-                foreach (var diag in afterContext.Diagnostics)
-                {
-                    Console.WriteLine(diag.ToString());
-                }
-                if (!emitResult.Success)
-                {
-                    throw GetMsBuildError(text: "Compilation failed");
-                }
+                return emitResult;
             }
         }
 
@@ -211,7 +222,8 @@ namespace StackExchange.Precompilation
             }
             catch (Exception ex)
             {
-                throw GetMsBuildError(path, text: ex.Message);
+                _diagnostics.Add(Diagnostic.Create(FailedParsingSourceTree, path.ToLocation(), ex.ToString()));
+                return null;
             }
             finally
             {
@@ -231,7 +243,8 @@ namespace StackExchange.Precompilation
             Parallel.ForEach(paths,
                 (file, state, index) =>
                 {
-                    switch (Path.GetExtension(file))
+                    var ext = Path.GetExtension(file);
+                    switch (ext)
                     {
                         case ".cs":
                             trees[index] = ParseSyntaxTreeAndDispose(new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read), file);
@@ -262,15 +275,17 @@ namespace StackExchange.Precompilation
                             }
                             catch (Exception ex)
                             {
-                                throw GetMsBuildError(viewVirtualPath, text: ex.Message);
+                                _diagnostics.Add(Diagnostic.Create(ViewGenerationFailed, file.ToLocation(), ex.ToString()));
                             }
                             break;
                         default:
-                            throw GetMsBuildError(file, text: "unknown file type");
+                            _diagnostics.Add(Diagnostic.Create(UnknownFileType, file.ToLocation(), ext));
+                            break;
                     }
                 });
             return trees;
         }
+
 
         private static string GetRelativeUri(string filespec, string folder)
         {
