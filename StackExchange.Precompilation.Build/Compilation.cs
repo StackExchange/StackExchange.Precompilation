@@ -120,7 +120,7 @@ namespace StackExchange.Precompilation
             var pdbPath = _cscArgs.PdbPath;
             var outputPath = Path.Combine(_cscArgs.OutputDirectory, _cscArgs.OutputFileName);
 
-            if (_cscArgs.EmitPdb)
+            if (!_cscArgs.EmitPdb)
             {
                 pdbPath = null;
             }
