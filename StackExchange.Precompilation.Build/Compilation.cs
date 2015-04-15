@@ -238,7 +238,7 @@ namespace StackExchange.Precompilation
             return ParseSyntaxTreeAndDispose(new MemoryStream(encoding.GetBytes(source)), path, encoding);
         }
 
-        private SyntaxTree[] LoadSources(ICollection<string> paths)
+        private IEnumerable<SyntaxTree> LoadSources(ICollection<string> paths)
         {
             var trees = new SyntaxTree[paths.Count];
             Parallel.ForEach(paths,
@@ -284,7 +284,7 @@ namespace StackExchange.Precompilation
                             break;
                     }
                 });
-            return trees;
+            return trees.Where(x => x != null);
         }
 
 
