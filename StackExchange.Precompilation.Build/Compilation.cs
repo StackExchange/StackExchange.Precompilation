@@ -50,36 +50,40 @@ namespace StackExchange.Precompilation
 
         public bool Run()
         {
-            var references = SetupReferences();
-            var sources = LoadSources(_cscArgs.SourceFiles.Select(x => x.Path).ToArray());
-
-            var compilationModules = LoadModules().ToList();
-
-            var compilation = CSharpCompilation.Create(
-                options: _cscArgs.CompilationOptions,
-                references: references,
-                syntaxTrees: sources,
-                assemblyName: _cscArgs.CompilationName);
-
-            var context = new BeforeCompileContext()
+            try
             {
-                Modules = compilationModules,
-                Arguments = _cscArgs,
-                Compilation = compilation,
-                Diagnostics = _diagnostics,
-                Resources = _cscArgs.ManifestResources.ToList()
-            };
+                var references = SetupReferences();
+                var sources = LoadSources(_cscArgs.SourceFiles.Select(x => x.Path).ToArray());
 
-            foreach (var module in compilationModules)
-            {
-                module.BeforeCompile(context);
+                var compilationModules = LoadModules().ToList();
+
+                var compilation = CSharpCompilation.Create(
+                    options: _cscArgs.CompilationOptions,
+                    references: references,
+                    syntaxTrees: sources,
+                    assemblyName: _cscArgs.CompilationName);
+
+                var context = new BeforeCompileContext()
+                {
+                    Modules = compilationModules,
+                    Arguments = _cscArgs,
+                    Compilation = compilation,
+                    Diagnostics = _diagnostics,
+                    Resources = _cscArgs.ManifestResources.ToList()
+                };
+
+                foreach (var module in compilationModules)
+                {
+                    module.BeforeCompile(context);
+                }
+
+                var emitResult = Emit(context);
+                return emitResult.Success;
             }
-
-            var emitResult = Emit(context);
-
-            _diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
-
-            return emitResult.Success;
+            finally
+            {
+                _diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
+            }
         }
 
         private IEnumerable<ICompileModule> LoadModules()
