@@ -58,7 +58,7 @@ namespace StackExchange.Precompilation
                 var compilationModules = LoadModules().ToList();
 
                 var compilation = CSharpCompilation.Create(
-                    options: _cscArgs.CompilationOptions,
+                    options: _cscArgs.CompilationOptions.WithAssemblyIdentityComparer(DesktopAssemblyIdentityComparer.Default),
                     references: references,
                     syntaxTrees: sources,
                     assemblyName: _cscArgs.CompilationName);
