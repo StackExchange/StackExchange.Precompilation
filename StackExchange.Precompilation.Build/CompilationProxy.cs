@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace StackExchange.Precompilation
@@ -19,9 +21,20 @@ namespace StackExchange.Precompilation
             {
                 ApplicationName = AppDomain.CurrentDomain.SetupInformation.ApplicationName,
                 ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
-                ConfigurationFile = Path.Combine(Directory.GetCurrentDirectory(), "web.config"),
+                ConfigurationFile = DetectConfigFile(cscArgs),
             };
             return CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), PrecompilationExtensions.CsCompilationAppDomainName);
+        }
+
+        private static string DetectConfigFile(CommandLineArguments arguments)
+        {
+            var candidates = new []
+            {
+                arguments.AppConfigPath,
+                Path.Combine(arguments.BaseDirectory, "web.config"),
+                Path.Combine(arguments.BaseDirectory, "app.config"),
+            };
+            return candidates.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x) && File.Exists(x));
         }
 
         private bool RunCs(string baseDirectory, string[] args)
