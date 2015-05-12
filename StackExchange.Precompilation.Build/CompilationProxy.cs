@@ -23,7 +23,7 @@ namespace StackExchange.Precompilation
                 ApplicationBase = AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
                 ConfigurationFile = DetectConfigFile(cscArgs),
             };
-            return CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), PrecompilationExtensions.CsCompilationAppDomainName);
+            return CompileInDomain(setup, proxy => proxy.RunCs(cscArgs.BaseDirectory, args), AppDomainHelper.CsCompilationAppDomainName);
         }
 
         private static string DetectConfigFile(CommandLineArguments arguments)

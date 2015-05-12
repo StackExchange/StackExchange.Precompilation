@@ -223,7 +223,7 @@ namespace StackExchange.Precompilation
             }
             catch (Exception ex)
             {
-                _diagnostics.Add(Diagnostic.Create(FailedParsingSourceTree, path.ToLocation(), ex.ToString()));
+                _diagnostics.Add(Diagnostic.Create(FailedParsingSourceTree, AsLocation(path), ex.ToString()));
                 return null;
             }
             finally
@@ -276,17 +276,21 @@ namespace StackExchange.Precompilation
                             }
                             catch (Exception ex)
                             {
-                                _diagnostics.Add(Diagnostic.Create(ViewGenerationFailed, file.ToLocation(), ex.ToString()));
+                                _diagnostics.Add(Diagnostic.Create(ViewGenerationFailed, AsLocation(file), ex.ToString()));
                             }
                             break;
                         default:
-                            _diagnostics.Add(Diagnostic.Create(UnknownFileType, file.ToLocation(), ext));
+                            _diagnostics.Add(Diagnostic.Create(UnknownFileType, AsLocation(file), ext));
                             break;
                     }
                 });
             return trees.Where(x => x != null);
         }
 
+        private static Location AsLocation(string path)
+        {
+            return Location.Create(path, new TextSpan(), new LinePositionSpan());
+        }
 
         private static string GetRelativeUri(string filespec, string folder)
         {
@@ -297,34 +301,6 @@ namespace StackExchange.Precompilation
             }
             Uri folderUri = new Uri(folder);
             return "/" + folderUri.MakeRelativeUri(pathUri).ToString().TrimStart('/');
-        }
-
-        // http://blogs.msdn.com/b/msbuild/archive/2006/11/03/msbuild-visual-studio-aware-error-messages-and-message-formats.aspx
-        // http://msdn.microsoft.com/en-us/library/yxkt8b26.aspx
-        public static CompilationFailedException GetMsBuildError(string origin = null, LinePosition? position = null, string code = "MOONSPEAKCOMPILER", string text = null, string severity = "error")
-        {
-            origin = origin ?? Path.GetFileName(typeof(Compilation).Assembly.Location);
-            var sb = new StringBuilder();
-            if (!string.IsNullOrWhiteSpace(origin))
-            {
-                sb.Append(origin);
-                if (position.HasValue)
-                {
-                    sb.AppendFormat("({0},{1})", position.Value.Line + 1, position.Value.Character + 1);
-                }
-                sb.Append(": ");
-            }
-            sb.AppendFormat("{0} {1}: {2}", severity, code, text);
-            return new CompilationFailedException(sb.ToString())
-            {
-                Data =
-                {
-                    { "code", code },
-                    { "origin", origin },
-                    { "originPosition", position + "" },
-                    { "text", text },
-                },
-            };
         }
     }
 }

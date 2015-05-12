@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace StackExchange.Precompilation
 {
-    public static class Program
+    static class Program
     {
         static void Main(string[] args)
         {
@@ -15,7 +15,7 @@ namespace StackExchange.Precompilation
                 if (args.Contains("/help", StringComparer.OrdinalIgnoreCase) 
                  || args.Contains("/?", StringComparer.OrdinalIgnoreCase))
                 {
-                    PrintHelp(false);
+                    PrintHelp();
                 }
                 else
                 {
@@ -26,7 +26,8 @@ namespace StackExchange.Precompilation
                         {
                             Console.Error.WriteLine(diagnostic.ToString());
                         }
-                        PrintHelp(true);
+                        PrintHelp();
+                        Console.WriteLine("ERROR: invalid invocation syntax");
                     }
 
                     Console.WriteLine("Starting in csc mode");
@@ -38,46 +39,28 @@ namespace StackExchange.Precompilation
             }
             catch (Exception ex)
             {
-                if (Walker_TexasRanger(ex))
+                var agg = ex as AggregateException;
+                Console.WriteLine("ERROR: An unhandled exception occured");
+                if (agg != null)
                 {
-                    Environment.ExitCode = -1;
+                    agg = agg.Flatten();
+                    foreach (var inner in agg.InnerExceptions)
+                    {
+                        Console.Error.WriteLine(inner);
+                    }
                 }
                 else
                 {
-                    Console.Error.WriteLine("error: an unhandled exception occured - {0} - {1}", ex.Message, ex.StackTrace);
-                    Environment.ExitCode = -2;
+                    Console.Error.WriteLine(ex);
                 }
+                Environment.ExitCode = 2;
             }
         }
 
-        private static void PrintHelp(bool @throw)
+        private static void PrintHelp()
         {
             var assembly = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
             Console.WriteLine("USAGE: execute {0} instead of csc.exe to compile .cs and .cshtml files", assembly);
-
-            if (@throw)
-            {
-                throw Compilation.GetMsBuildError(text: "invalid invocation syntax");
-            }
-        }
-
-        static bool Walker_TexasRanger(Exception ex)
-        {
-            var com = ex as CompilationFailedException;
-            var agg = ex as AggregateException;
-            var handled = false;
-            if (com != null)
-            {
-                Console.WriteLine(ex.Message);
-                handled = true;
-            }
-            else if (agg != null)
-            {
-                agg.Flatten().Handle(Walker_TexasRanger);
-                handled = true;
-            }
-
-            return handled;
         }
     }
 }

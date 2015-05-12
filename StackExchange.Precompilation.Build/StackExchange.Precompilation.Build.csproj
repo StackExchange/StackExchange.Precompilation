@@ -105,7 +105,6 @@
     <Reference Include="System.Globalization" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CompilationFailedException.cs" />
     <Compile Include="CompilationProxy.cs" />
     <Compile Include="Compilation.cs" />
     <Compile Include="Program.cs" />
