@@ -1,0 +1,10 @@
+*.suo
+*/bin/
+*/obj/
+*.orig
+*.user
+*.nupkg
+*.GhostDoc.xml
+MoonSpeak.sln.ide/
+tools
+packages
