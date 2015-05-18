@@ -1,0 +1,11 @@
+﻿@model SampleModel
+@{
+    ViewBag.Title = "Test Page";
+}
+Precompiled View Paths:
+<ul>
+    @foreach (var path in Model.ViewPaths)
+    {
+        <li>@path</li>
+    }
+</ul>
