@@ -267,8 +267,7 @@ namespace StackExchange.Precompilation
                                 using (var typeWr = new StringWriter(sbSource))
                                 {
                                     var engine = new RazorTemplateEngine(host);
-                                    var className = Regex.Replace(viewVirtualPath, @"[^\w]", "_", RegexOptions.IgnoreCase);
-                                    var razorOut = engine.GenerateCode(rdr, className, "ASP", viewFullPath);
+                                    var razorOut = engine.GenerateCode(rdr, null, null, viewFullPath);
                                     var codeGenOptions = new CodeGeneratorOptions { VerbatimOrder = true, ElseOnClosing = false, BlankLinesBetweenMembers = false };
                                     provider.GenerateCodeFromCompileUnit(razorOut.GeneratedCode, typeWr, codeGenOptions);
                                     trees[index] = ParseSyntaxTree(sbSource.ToString(), viewFullPath, rdr.CurrentEncoding);
