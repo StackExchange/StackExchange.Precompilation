@@ -4,11 +4,15 @@ using System.Web.WebPages.Razor;
 namespace StackExchange.Precompilation
 {
     /// <summary>
-    /// Register this class as your asp.net view factory to use MoonSpeak.
-    /// The registration will appear like so:
-    /// <host factoryType="StackExchange.MoonSpeak.PrecompiledMvcWebRazorHostFactory, StackExchange.MoonSpeak.MVC5"/>
-    /// and is typically found in Views\Web.config
+    /// Register this class as your asp.net view factory to use precompiled views.
     /// </summary>
+    /// <remarks>
+    /// <example>
+    /// The registration will appear like so:
+    /// <code language="xml"> <![CDATA[<host factoryType="StackExchange.Precompilation.PrecompiledMvcWebRazorHostFactory, StackExchange.Precompilation"/>]]></code>
+    /// and is typically found in Views\Web.config 
+    /// </example>
+    /// </remarks>
     public class PrecompiledMvcWebRazorHostFactory : MvcWebRazorHostFactory
     {
         /// <summary>

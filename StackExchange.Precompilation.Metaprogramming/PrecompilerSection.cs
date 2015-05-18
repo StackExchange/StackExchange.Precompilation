@@ -5,6 +5,7 @@ namespace StackExchange.Precompilation
     /// <summary>
     /// Defines the <c>stackExchange.precompiler</c> <see cref="ConfigurationSection"/>.
     /// </summary>
+    /// <seealso cref="ICompileModule"/>
     public class PrecompilerSection : ConfigurationSection
     {
         /// <summary>
