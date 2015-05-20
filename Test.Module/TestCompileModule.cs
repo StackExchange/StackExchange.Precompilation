@@ -6,7 +6,7 @@ namespace Test.Module
 {
     public class TestCompileModule : ICompileModule
     {
-        public void BeforeCompile(IBeforeCompileContext context)
+        public void BeforeCompile(BeforeCompileContext context)
         {
             context.Diagnostics.Add(
                 Diagnostic.Create(
@@ -32,7 +32,7 @@ namespace Test.Module
 "));
         }
 
-        public void AfterCompile(IAfterCompileContext context)
+        public void AfterCompile(AfterCompileContext context)
         {
         }
     }

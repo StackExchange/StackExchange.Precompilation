@@ -68,10 +68,11 @@
   <ItemGroup>
     <Compile Include="CompileModuleElement.cs" />
     <Compile Include="CompileModulesCollection.cs" />
-    <Compile Include="IAfterCompileContext.cs" />
-    <Compile Include="IBeforeCompileContext.cs" />
+    <Compile Include="AfterCompileContext.cs" />
+    <Compile Include="BeforeCompileContext.cs" />
     <Compile Include="ICompileModule.cs" />
     <Compile Include="AppDomainHelper.cs" />
+    <Compile Include="IMetadataReference.cs" />
     <Compile Include="PrecompilerSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -63,19 +63,15 @@ namespace StackExchange.Precompilation
                     syntaxTrees: sources,
                     assemblyName: _cscArgs.CompilationName);
 
-                var context = new BeforeCompileContext()
+                var context = new CompileContext(compilationModules);
+
+                context.Before(new BeforeCompileContext
                 {
-                    Modules = compilationModules,
                     Arguments = _cscArgs,
                     Compilation = compilation,
                     Diagnostics = _diagnostics,
                     Resources = _cscArgs.ManifestResources.ToList()
-                };
-
-                foreach (var module in compilationModules)
-                {
-                    module.BeforeCompile(context);
-                }
+                });
 
                 var emitResult = Emit(context);
                 return emitResult.Success;
@@ -114,9 +110,9 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private EmitResult Emit(BeforeCompileContext beforeContext)
+        private EmitResult Emit(CompileContext context)
         {
-            var compilation = beforeContext.Compilation;
+            var compilation = context.BeforeCompileContext.Compilation;
             var pdbPath = _cscArgs.PdbPath;
             var outputPath = Path.Combine(_cscArgs.OutputDirectory, _cscArgs.OutputFileName);
 
@@ -147,7 +143,7 @@ namespace StackExchange.Precompilation
                     win32Resources: win32Resources);
 
                 _diagnostics.AddRange(emitResult.Diagnostics);
-                var afterContext = new AfterCompileContext
+                context.After(new AfterCompileContext
                 {
                     Arguments = _cscArgs,
                     AssemblyStream = peStream,
@@ -155,34 +151,38 @@ namespace StackExchange.Precompilation
                     Diagnostics = _diagnostics,
                     SymbolStream = pdbStream,
                     XmlDocStream = xmlDocumentationStream,
-                };
-
-                foreach(var module in beforeContext.Modules)
-                {
-                    module.AfterCompile(afterContext);
-                }
+                });
 
                 return emitResult;
             }
         }
 
-        class BeforeCompileContext : IBeforeCompileContext
+        class CompileContext
         {
-            internal List<ICompileModule> Modules { get; set; }
-            public CSharpCommandLineArguments Arguments { get; set; }
-            public CSharpCompilation Compilation { get; set; }
-            public IList<ResourceDescription> Resources { get; set; }
-            public IList<Diagnostic> Diagnostics { get; set; }
-        }
-
-        class AfterCompileContext : IAfterCompileContext
-        {
-            public CSharpCommandLineArguments Arguments { get; set; }
-            public CSharpCompilation Compilation { get; set; }
-            public Stream AssemblyStream { get; set; }
-            public Stream SymbolStream { get; set; }
-            public Stream XmlDocStream { get; set; }
-            public IList<Diagnostic> Diagnostics { get; set; }
+            private readonly ICompileModule[] _modules;
+            public BeforeCompileContext BeforeCompileContext { get; private set; }
+            public AfterCompileContext AfterCompileContext { get; private set; }
+            public CompileContext(IEnumerable<ICompileModule> modules)
+            {
+                _modules = modules == null ? new ICompileModule[0] : modules.ToArray();
+            }
+            public void Before(BeforeCompileContext context)
+            {
+                Apply(context, x => BeforeCompileContext = x, m => m.BeforeCompile);
+            }
+            public void After(AfterCompileContext context)
+            {
+                Apply(context, x => AfterCompileContext = x, m => m.AfterCompile);
+            }
+            private void Apply<TContext>(TContext ctx, Action<TContext> setter, Func<ICompileModule, Action<TContext>> actionGetter)
+            {
+                setter(ctx);
+                foreach(var module in _modules)
+                {
+                    var action = actionGetter(module);
+                    action(ctx);
+                }
+            }
         }
 
         private ICollection<MetadataReference> SetupReferences()
