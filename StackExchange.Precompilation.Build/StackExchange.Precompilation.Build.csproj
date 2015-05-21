@@ -109,6 +109,7 @@
   <ItemGroup>
     <Compile Include="CompilationProxy.cs" />
     <Compile Include="Compilation.cs" />
+    <Compile Include="PrecompilationCommandLineParser.cs" />
     <Compile Include="RazorParser.cs" />
     <Compile Include="CSharpParser.cs" />
     <Compile Include="Program.cs" />
