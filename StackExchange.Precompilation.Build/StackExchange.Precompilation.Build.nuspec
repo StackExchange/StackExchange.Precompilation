@@ -11,7 +11,7 @@
     <language>en-US</language>
   </metadata>
   <files>
-      <file src="bin\Release\*.*" target="tools" />
+      <file src="..\tools\*.*" target="tools" />
       <file src="*.targets" target="build" /><!-- .targets file name must match the package id -->
   </files>
 </package>

@@ -109,8 +109,11 @@
   <ItemGroup>
     <Compile Include="CompilationProxy.cs" />
     <Compile Include="Compilation.cs" />
+    <Compile Include="RazorParser.cs" />
+    <Compile Include="CSharpParser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Parser.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

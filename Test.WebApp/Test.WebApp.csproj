@@ -176,7 +176,7 @@
   <Target Name="AfterBuild">
   </Target> -->
   <PropertyGroup>
-    <SEPrecompilerPath>$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\</SEPrecompilerPath>
+    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\</SEPrecompilerPath>
     <SEPrecompilerIncludeRazor>true</SEPrecompilerIncludeRazor>
   </PropertyGroup>
   <Import Project="$(SolutionDir)StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
