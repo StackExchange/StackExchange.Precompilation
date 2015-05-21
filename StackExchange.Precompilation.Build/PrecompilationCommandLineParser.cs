@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -61,5 +62,39 @@ namespace StackExchange.Precompilation
             yield return commandLine.Substring(offset).Trim();
         }
 
+        public static PrecompilationCommandLineArgs Parse(string[] arguments, string baseDirectory)
+        {
+            var result = new PrecompilationCommandLineArgs { Arguments = arguments, BaseDirectory = baseDirectory };
+            if (arguments == null) return result;
+
+            var loadedRsp = new HashSet<string>();
+            var references = new HashSet<string>();
+            for(var i = 0; i < arguments.Length; i++)
+            {
+                var arg = arguments[i];
+                if(arg.StartsWith("@"))
+                {
+                    if (!loadedRsp.Add(arg = ParseFileFromArg(arg, '@'))) continue;
+                    arguments = arguments.Concat(File.ReadAllLines(arg).SelectMany(SplitCommandLine)).ToArray();
+                }
+                else if(arg.StartsWith("/r:") || arg.StartsWith("/reference:"))
+                {
+                    // don't care about extern stuff for now..
+                    // https://msdn.microsoft.com/en-us/library/ms173212.aspx
+                    references.Add(ParseFileFromArg(arg));
+                }
+                else if(arg.StartsWith("/appconfig:"))
+                {
+                    result.AppConfig = ParseFileFromArg(arg);
+                }
+            }
+            result.References = references.ToArray();
+            return result;
+        }
+
+        private static string ParseFileFromArg(string arg, char delimiter = ':')
+        {
+            return Path.GetFullPath(arg.Substring(arg.IndexOf(delimiter) + 1));
+        }
     }
 }

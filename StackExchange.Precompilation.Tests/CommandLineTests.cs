@@ -1,4 +1,7 @@
-﻿using NUnit.Framework;
+﻿using System;
+using System.IO;
+using System.Linq;
+using NUnit.Framework;
 
 namespace StackExchange.Precompilation.Tests
 {
@@ -21,6 +24,32 @@ namespace StackExchange.Precompilation.Tests
             var actual = PrecompilationCommandLineParser.SplitCommandLine(input);
 
             CollectionAssert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void ParseArguments()
+        {
+            Assert.DoesNotThrow(() => PrecompilationCommandLineParser.Parse(null, null));
+            Assert.DoesNotThrow(() => PrecompilationCommandLineParser.Parse(new string[0], null));
+            Assert.DoesNotThrow(() => PrecompilationCommandLineParser.Parse(null, ""));
+            Assert.DoesNotThrow(() => PrecompilationCommandLineParser.Parse(new string[0], ""));
+        }
+
+        [Test]
+        [TestCase("a b c", new string[0], (string)null)]
+        [TestCase("a b /r:c.dll", new[] { "c.dll" }, (string)null)]
+        [TestCase("a b /r:c.dll /r:d.dll", new[] { "c.dll", "d.dll" }, (string)null)]
+        [TestCase("a b /r:c.dll /appconfig:moar.config /r:d.dll", new[] { "c.dll", "d.dll" }, "moar.config")]
+        public void ParseArgumentCases(string cmdline, string[] references, string appconfig)
+        {
+            var dir = Guid.NewGuid().ToString();
+            var args = PrecompilationCommandLineParser.SplitCommandLine(cmdline);
+            var parsed = PrecompilationCommandLineParser.Parse(args, dir);
+            Func<string, string> resolvePath = Path.GetFullPath;
+
+            Assert.AreEqual(dir, parsed.BaseDirectory);
+            Assert.AreEqual(appconfig == null ? null : resolvePath(appconfig), parsed.AppConfig);
+            CollectionAssert.AreEqual(references.Select(resolvePath), parsed.References);
         }
     }
 }

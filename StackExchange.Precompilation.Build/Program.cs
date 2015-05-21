@@ -12,29 +12,9 @@ namespace StackExchange.Precompilation
         {
             try
             {
-                if (args.Contains("/help", StringComparer.OrdinalIgnoreCase) 
-                 || args.Contains("/?", StringComparer.OrdinalIgnoreCase))
+                if (!CompilationProxy.RunCs(args))
                 {
-                    PrintHelp();
-                }
-                else
-                {
-                    var cscArgs = CSharpCommandLineParser.Default.Parse(args, Directory.GetCurrentDirectory());
-                    if (cscArgs.Errors.Any())
-                    {
-                        foreach (var diagnostic in cscArgs.Errors)
-                        {
-                            Console.Error.WriteLine(diagnostic.ToString());
-                        }
-                        PrintHelp();
-                        Console.WriteLine("ERROR: invalid invocation syntax");
-                    }
-
-                    Console.WriteLine("Starting in csc mode");
-                    if (!CompilationProxy.RunCs(cscArgs, args))
-                    {
-                        Environment.ExitCode = 1;
-                    }
+                    Environment.ExitCode = 1;
                 }
             }
             catch (Exception ex)
@@ -57,10 +37,5 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private static void PrintHelp()
-        {
-            var assembly = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
-            Console.WriteLine("USAGE: execute {0} instead of csc.exe to compile .cs and .cshtml files", assembly);
-        }
     }
 }

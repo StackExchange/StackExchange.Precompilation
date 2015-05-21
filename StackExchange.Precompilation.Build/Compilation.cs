@@ -6,8 +6,6 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -17,6 +15,8 @@ namespace StackExchange.Precompilation
 {
     class Compilation
     {
+        private readonly PrecompilationCommandLineArgs _precompilationCommandLineArgs;
+
         internal CSharpCommandLineArguments CscArgs { get; private set; }
         internal DirectoryInfo CurrentDirectory { get; private set; }
         internal List<Diagnostic> Diagnostics { get; private set; }
@@ -34,20 +34,17 @@ namespace StackExchange.Precompilation
             new DiagnosticDescriptor("SE004", "Failed parsing source tree", "Failed parasing source tree: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
 
 
-        public Compilation(CSharpCommandLineArguments cscArgs, DirectoryInfo currentDirectory, Encoding defaultEncoding = null)
+        public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
         {
-            Diagnostics = new List<Diagnostic>();
-            CscArgs = cscArgs;
-            CurrentDirectory = currentDirectory;
-            Encoding = CscArgs.Encoding ?? defaultEncoding ?? Encoding.UTF8;
-
+            _precompilationCommandLineArgs = precompilationCommandLineArgs;
             _syntaxTreeLoaders = new Dictionary<string, Lazy<Parser>>
             {
                 {".cs", new Lazy<Parser>(CSharp, LazyThreadSafetyMode.PublicationOnly)},
                 {".cshtml", new Lazy<Parser>(Razor, LazyThreadSafetyMode.PublicationOnly)},
             };
 
-            AppDomain.CurrentDomain.SetData("DataDirectory", Path.Combine(currentDirectory.FullName, "App_Data")); // HACK mocking ASP.NET's ~/App_Data aka. |DataDirectory|
+            CurrentDirectory = new DirectoryInfo(_precompilationCommandLineArgs.BaseDirectory);
+            AppDomain.CurrentDomain.SetData("DataDirectory", Path.Combine(CurrentDirectory.FullName, "App_Data")); // HACK mocking ASP.NET's ~/App_Data aka. |DataDirectory|
         }
 
         private Parser CSharp()
@@ -64,6 +61,14 @@ namespace StackExchange.Precompilation
         {
             try
             {
+                CscArgs = CSharpCommandLineParser.Default.Parse(_precompilationCommandLineArgs.Arguments, _precompilationCommandLineArgs.BaseDirectory);
+                Diagnostics = new List<Diagnostic>(CscArgs.Errors);
+                if (Diagnostics.Any())
+                {
+                    return false;
+                }
+                Encoding = CscArgs.Encoding ?? Encoding.UTF8;
+
                 var references = SetupReferences();
                 var sources = LoadSources(CscArgs.SourceFiles.Select(x => x.Path).ToArray());
 
@@ -199,56 +204,10 @@ namespace StackExchange.Precompilation
 
         private ICollection<MetadataReference> SetupReferences()
         {
-            var references = CscArgs.MetadataReferences.Select(x => (MetadataReference)MetadataReference.CreateFromFile(x.Reference, x.Properties)).ToArray();
-            var referenceAssemblies = references.Select(x =>
-            {
-                try
-                {
-                    return Assembly.ReflectionOnlyLoadFrom(x.Display);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine("warning: could not load reference '{0}' - {1} - {2}", x.Display, ex.Message, ex.StackTrace);
-                    return null;
-                }
-            }).Where(x => x != null).ToArray();
-            var fullLookup = referenceAssemblies.ToDictionary(x => x.FullName);
-            var shortLookup = referenceAssemblies.ToDictionary(x => x.GetName().Name);
-            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
-            {
-                Assembly a;
-                if (fullLookup.TryGetValue(e.Name, out a) || shortLookup.TryGetValue(e.Name, out a))
-                {
-                    return Assembly.LoadFile(a.Location);
-                }
-                return null;
-            };
-            return references;
+            // really don't care about /addmodule and .netmodule stuff...
+            // https://msdn.microsoft.com/en-us/library/226t7yxe.aspx
+            return _precompilationCommandLineArgs.References.Select(x => (MetadataReference)MetadataReference.CreateFromFile(x, MetadataReferenceProperties.Assembly)).ToArray();
         }
-
-        //internal SyntaxTree ParseSyntaxTreeAndDispose(Stream stream, string path, Encoding encoding = null)
-        //{
-        //    try
-        //    {
-        //        var sourceText = SourceText.From(stream, encoding ?? _encoding);
-        //        return SyntaxFactory.ParseSyntaxTree(sourceText, _cscArgs.ParseOptions, path);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _diagnostics.Add(Diagnostic.Create(FailedParsingSourceTree, AsLocation(path), ex.ToString()));
-        //        return null;
-        //    }
-        //    finally
-        //    {
-        //        stream.Dispose();
-        //    }
-        //}
-
-        //internal SyntaxTree ParseSyntaxTree(string source, string path, Encoding encoding = null)
-        //{
-        //    encoding = encoding ?? _encoding;
-        //    return ParseSyntaxTreeAndDispose(new MemoryStream(encoding.GetBytes(source)), path, encoding);
-        //}
 
         private IEnumerable<SyntaxTree> LoadSources(ICollection<string> paths)
         {
@@ -269,49 +228,12 @@ namespace StackExchange.Precompilation
                     {
                         Diagnostics.Add(Diagnostic.Create(UnknownFileType, AsLocation(file), ext));
                     }
-
-                    //switch (ext)
-                    //{
-                    //    case ".cs":
-                    //        trees[index] = ParseSyntaxTreeAndDispose(, file);
-                    //        break;
-                    //    case ".cshtml":
-                    //        var viewFullPath = file;
-                    //        var viewVirtualPath = GetRelativeUri(file, _currentDirectory.FullName);
-                    //        try
-                    //        {
-                    //            var viewConfig = WebConfigurationManager.OpenMappedWebConfiguration(_configMap, viewVirtualPath);
-                    //            var razorConfig = viewConfig.GetSectionGroup("system.web.webPages.razor") as System.Web.WebPages.Razor.Configuration.RazorWebSectionGroup;
-                    //            var host = razorConfig == null
-                    //                ? System.Web.WebPages.Razor.WebRazorHostFactory.CreateDefaultHost(viewVirtualPath, viewFullPath)
-                    //                : System.Web.WebPages.Razor.WebRazorHostFactory.CreateHostFromConfig(razorConfig, viewVirtualPath, viewFullPath);
-                    //            var sbSource = new StringBuilder();
-                    //            using (var str = new FileStream(viewFullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    //            using (var rdr = new StreamReader(str, _encoding, detectEncodingFromByteOrderMarks: true))
-                    //            using (var provider = CodeDomProvider.CreateProvider("csharp"))
-                    //            using (var typeWr = new StringWriter(sbSource))
-                    //            {
-                    //                var engine = new RazorTemplateEngine(host);
-                    //                var razorOut = engine.GenerateCode(rdr, null, null, viewFullPath);
-                    //                var codeGenOptions = new CodeGeneratorOptions { VerbatimOrder = true, ElseOnClosing = false, BlankLinesBetweenMembers = false };
-                    //                provider.GenerateCodeFromCompileUnit(razorOut.GeneratedCode, typeWr, codeGenOptions);
-                    //                trees[index] = ParseSyntaxTree(sbSource.ToString(), viewFullPath, rdr.CurrentEncoding);
-                    //            }
-                    //        }
-                    //        catch (Exception ex)
-                    //        {
-                    //            _diagnostics.Add(Diagnostic.Create(ViewGenerationFailed, AsLocation(file), ex.ToString()));
-                    //        }
-                    //        break;
-                    //    default:
-                    //        _diagnostics.Add(Diagnostic.Create(UnknownFileType, AsLocation(file), ext));
-                    //        break;
-                    //}
                 });
+
             return trees.Where(x => x != null);
         }
 
-        internal Location AsLocation(string path)
+        public Location AsLocation(string path)
         {
             return Location.Create(path, new TextSpan(), new LinePositionSpan());
         }

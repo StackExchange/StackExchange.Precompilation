@@ -11,6 +11,7 @@
             SEPrecompilerCore;
         </CompileDependsOn> 
         <SEPrecompilerTools>$(MSBuildThisFileDirectory)..\tools</SEPrecompilerTools>
+        <UseAppConfigForCompiler Condition="'$(UseAppConfigForCompiler)' == '' and '$(SEPrecompilerSkip)' != 'true'">true</UseAppConfigForCompiler>
     </PropertyGroup>
     <Target Name="SEPrecompilerSetup">
         <PropertyGroup>

@@ -9,9 +9,12 @@
     <description>Replaces CSC and aspnet_compiler.exe with StackExchange.Precompiler for compiling C# (.cs) and Razor View (.cshtml) files in asp.net mvc 5 projects.</description>
     <tags>Razor</tags>
     <language>en-US</language>
+    <dependencies>
+      <dependency id="StackExchange.Precompilation.Metaprogramming" version="$version$" />
+    </dependencies>
   </metadata>
   <files>
-      <file src="..\tools\*.*" target="tools" />
+      <file src="bin\Release\StackExchange.Precompiler.*" target="tools" />
       <file src="*.targets" target="build" /><!-- .targets file name must match the package id -->
   </files>
 </package>
