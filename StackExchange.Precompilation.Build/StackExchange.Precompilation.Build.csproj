@@ -136,6 +136,10 @@
       <Project>{E42F58D0-658F-4EB8-A031-45DE998F769D}</Project>
       <Name>StackExchange.Precompilation.Metaprogramming</Name>
     </ProjectReference>
+    <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
+      <Project>{3c0a90f1-b19e-4305-ab71-3cd31c7d0f4d}</Project>
+      <Name>StackExchange.Precompilation</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />

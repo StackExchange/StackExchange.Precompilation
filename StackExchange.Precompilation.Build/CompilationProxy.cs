@@ -33,7 +33,7 @@ namespace StackExchange.Precompilation
 
                 if (setup.ConfigurationFile == null)
                 {
-                    setup.ConfigurationFile = new[] { "app.config", "web.config" }.FirstOrDefault(File.Exists);
+                    setup.ConfigurationFile = new[] { "app.config", "web.config" }.Select(x => Path.Combine(precompilationArgs.BaseDirectory, x)).FirstOrDefault(File.Exists);
                     if (!string.IsNullOrWhiteSpace(setup.ConfigurationFile))
                     {
                         Console.WriteLine("WARNING: '" + setup.ConfigurationFile + "' used as fallback config file");
