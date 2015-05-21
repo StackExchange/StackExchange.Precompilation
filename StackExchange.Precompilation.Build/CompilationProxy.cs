@@ -19,6 +19,7 @@ namespace StackExchange.Precompilation
         {
             var precompilationArgs = PrecompilationCommandLineParser.Parse(args, Directory.GetCurrentDirectory());
 
+
             AppDomain compilationDomain = null;
             try
             {
@@ -27,8 +28,17 @@ namespace StackExchange.Precompilation
                 {
                     ApplicationName = currentSetup.ApplicationName,
                     ApplicationBase = currentSetup.ApplicationBase,
-                    ConfigurationFile = precompilationArgs.AppConfig ?? currentSetup.ConfigurationFile,
+                    ConfigurationFile = precompilationArgs.AppConfig,
                 };
+
+                if (setup.ConfigurationFile == null)
+                {
+                    setup.ConfigurationFile = new[] { "app.config", "web.config" }.FirstOrDefault(File.Exists);
+                    if (!string.IsNullOrWhiteSpace(setup.ConfigurationFile))
+                    {
+                        Console.WriteLine("WARNING: '" + setup.ConfigurationFile + "' used as fallback config file");
+                    }
+                }
 
                 compilationDomain = AppDomain.CreateDomain(
                     AppDomainHelper.CsCompilationAppDomainName,
