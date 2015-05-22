@@ -11,7 +11,7 @@ namespace StackExchange.Precompilation
     // https://msdn.microsoft.com/en-us/library/78f4aasd.aspx
     public class PrecompilationCommandLineParser
     {
-        private static readonly Regex NormalizeBackslashes = new Regex(@"(?!\\+"")\\+", RegexOptions.Compiled);
+        private static readonly Regex UnespacedBackslashes = new Regex(@"(?!\\+"")\\+", RegexOptions.Compiled);
         private static readonly Regex QuotesAfterSingleBackSlash = new Regex(@"(?<=(^|[^\\])((\\\\)+)?)""", RegexOptions.ExplicitCapture | RegexOptions.Compiled);
         private static readonly Regex Escaped = new Regex(@"\\(\\|"")", RegexOptions.Compiled);
 
@@ -19,10 +19,11 @@ namespace StackExchange.Precompilation
         {
             return Split(commandLine)
                 .TakeWhile(arg => !arg.StartsWith("#", StringComparison.Ordinal))
-                .Select(dirty => NormalizeBackslashes.Replace(dirty, "$0$0"))
+                .Select(dirty => UnespacedBackslashes.Replace(dirty, "$0$0"))
                 .Select(normalized => QuotesAfterSingleBackSlash.Replace(normalized, ""))
                 .Select(unquoted => Escaped.Replace(unquoted, "$1"))
                 .Where(arg => !string.IsNullOrEmpty(arg))
+                .Select(str => str.Trim())
                 .ToArray();
         }
 
@@ -30,9 +31,10 @@ namespace StackExchange.Precompilation
         {
             var isQuoted = false;
             var backslashCount = 0;
-            var offset = 0;
+            var splitIndex = 0;
+            var length = commandLine.Length;
 
-            for (var i = 0; i < commandLine.Length; i++)
+            for (var i = 0; i < length; i++)
             {
                 var c = commandLine[i];
                 switch (c)
@@ -40,7 +42,7 @@ namespace StackExchange.Precompilation
                     case '\\':
                         backslashCount += 1;
                         break;
-                    case '"':
+                    case '\"':
                         if (backslashCount % 2 == 0) isQuoted = !isQuoted;
                         goto default;
                     case ' ':
@@ -49,8 +51,12 @@ namespace StackExchange.Precompilation
                     case '\r':
                         if (!isQuoted)
                         {
-                            yield return commandLine.Substring(offset, i - offset).Trim();
-                            offset = i + 1;
+                            var take = i - splitIndex;
+                            if (take > 0)
+                            {
+                                yield return commandLine.Substring(splitIndex, take);
+                            }
+                            splitIndex = i + 1;
                         }
                         goto default;
                     default:
@@ -59,7 +65,10 @@ namespace StackExchange.Precompilation
                 }
             }
 
-            yield return commandLine.Substring(offset).Trim();
+            if (splitIndex < length)
+            {
+                yield return commandLine.Substring(splitIndex);
+            }
         }
 
         public static PrecompilationCommandLineArgs Parse(string[] arguments, string baseDirectory)
