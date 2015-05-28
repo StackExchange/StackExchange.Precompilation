@@ -71,17 +71,17 @@ namespace StackExchange.Precompilation
             private readonly string Path;
             private readonly string MasterPath;
             private readonly Type Compiled;
-            private readonly Func<WebViewPage, string, WebPageRenderingBase> StartPageGetter;
             private readonly Func<string, Type> CompiledTypeLookup;
             private readonly PrecompiledViewEngine ViewEngine;
+            private readonly bool RunViewStart;
 
-            public PrecompiledView(string path, string masterPath, Type compiled, Func<string, Type> compiledTypeLookup, Func<WebViewPage, string, WebPageRenderingBase> startPageGetter, PrecompiledViewEngine viewEngine)
+            public PrecompiledView(string path, string masterPath, Type compiled, Func<string, Type> compiledTypeLookup, bool runViewStart, PrecompiledViewEngine viewEngine)
             {
                 Path = path;
                 MasterPath = masterPath;
                 Compiled = compiled;
                 CompiledTypeLookup = compiledTypeLookup;
-                StartPageGetter = startPageGetter;
+                RunViewStart = runViewStart;
                 ViewEngine = viewEngine;
             }
 
@@ -98,21 +98,13 @@ namespace StackExchange.Precompilation
                 webViewPage.ViewContext = viewContext;
                 webViewPage.ViewData = viewContext.ViewData;
                 webViewPage.InitHelpers();
+                webViewPage.VirtualPathFactory = new PrecompiledVirtualPathFactory(CompiledTypeLookup, webViewPage.VirtualPathFactory);
 
                 pageContext = new WebPageContext(viewContext.HttpContext, webViewPage, null);
 
-                startPage = null;
-                if (StartPageGetter != null)
-                {
-                    startPage = StartPageGetter(webViewPage, "_ViewStart");
-                }
-
-                var asExecuting = webViewPage as WebPageExecutingBase;
-
-                if (asExecuting != null)
-                {
-                    asExecuting.VirtualPathFactory = new PrecompiledVirtualPathFactory(CompiledTypeLookup, asExecuting.VirtualPathFactory);
-                }
+                startPage = RunViewStart
+                    ? StartPage.GetStartPage(webViewPage, "_ViewStart", ViewEngine.FileExtensions)
+                    : null;
 
                 return webViewPage;
             }
@@ -124,13 +116,6 @@ namespace StackExchange.Precompilation
                     WebPageContext pageContext;
                     WebPageRenderingBase startPage;
                     var webViewPage = CreatePage(viewContext, writer, out pageContext, out startPage);
-
-                    var asExecuting = webViewPage as WebPageExecutingBase;
-
-                    if (asExecuting != null)
-                    {
-                        asExecuting.VirtualPathFactory = new PrecompiledVirtualPathFactory(CompiledTypeLookup, asExecuting.VirtualPathFactory);
-                    }
 
                     using (ViewEngine.DoProfileStep("ExecutePageHierarchy"))
                     {
@@ -337,36 +322,7 @@ namespace StackExchange.Precompilation
                 return null;
             }
 
-            return runViewStart
-                ? new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, GetStartPage, this)
-                : new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, null, this);
-        }
-
-        private WebPageRenderingBase GetStartPage(WebPageRenderingBase page, string fileName)
-        {
-            WebPageRenderingBase currentPage = page;
-            var pageDirectory = VirtualPathUtility.GetDirectory(page.VirtualPath);
-
-            while (!string.IsNullOrEmpty(pageDirectory) && pageDirectory != "/")
-            {
-                var virtualPath = VirtualPathUtility.Combine(pageDirectory, fileName + ".cshtml");
-
-                Type compiledType;
-                if (_views.TryGetValue(virtualPath, out compiledType))
-                {
-                    var parentStartPage = (StartPage)Activator.CreateInstance(compiledType);
-                    parentStartPage.VirtualPath = virtualPath;
-                    parentStartPage.ChildPage = currentPage;
-                    parentStartPage.VirtualPathFactory = page.VirtualPathFactory;
-                    currentPage = parentStartPage;
-
-                    break;
-                }
-
-                pageDirectory = VirtualPathUtility.GetDirectory(pageDirectory);
-            }
-
-            return currentPage;
+            return new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, runViewStart, this);
         }
 
         /// <inheritdoc />
