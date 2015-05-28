@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Web;
 using System.Web.Mvc;
+using System.Web.Routing;
 using System.Web.WebPages;
 
 namespace StackExchange.Precompilation
@@ -138,18 +140,6 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private static readonly Func<VirtualPathProviderViewEngine, ControllerContext, string, IView> CreatePartialViewThunk;
-        private static readonly Func<VirtualPathProviderViewEngine, ControllerContext, string, string, IView> CreateViewThunk;
-
-        static PrecompiledViewEngine()
-        {
-            var createPartialViewMtd = typeof(VirtualPathProviderViewEngine).GetMethod(nameof(CreatePartialView), BindingFlags.NonPublic | BindingFlags.Instance);
-            var createViewMtd = typeof(VirtualPathProviderViewEngine).GetMethod(nameof(CreateView), BindingFlags.NonPublic | BindingFlags.Instance);
-
-            CreatePartialViewThunk = (Func<VirtualPathProviderViewEngine, ControllerContext, string, IView>)Delegate.CreateDelegate(typeof(Func<VirtualPathProviderViewEngine, ControllerContext, string, IView>), createPartialViewMtd, throwOnBindFailure: true);
-            CreateViewThunk = (Func<VirtualPathProviderViewEngine, ControllerContext, string, string, IView>)Delegate.CreateDelegate(typeof(Func<VirtualPathProviderViewEngine, ControllerContext, string, string, IView>), createViewMtd, throwOnBindFailure: true);
-        }
-
         /// <summary>
         /// Gets the view paths
         /// </summary>
@@ -158,19 +148,9 @@ namespace StackExchange.Precompilation
         private readonly Dictionary<string, Type> _views;
 
         /// <summary>
-        /// Gets or sets the fallback view engine. This view engine is called when a precompiled view is not found.
-        /// </summary>
-        public VirtualPathProviderViewEngine FallbackViewEngine { get; set; }
-
-        /// <summary>
         /// Triggers when the engine performs a step that can be profiled.
         /// </summary>
         public Func<string, IDisposable> ProfileStep { get; set; }
-
-        /// <summary>
-        /// Triggers when the engine creates a view thunk.
-        /// </summary>
-        public Action<string> ViewThunk { get; set; }
 
         /// <summary>
         /// Creates a new PrecompiledViewEngine instance, scanning all assemblies in <paramref name="findAssembliesInPath"/> for precompiled views.
@@ -192,41 +172,39 @@ namespace StackExchange.Precompilation
         /// <param name="assemblies">The assemblies to scan for precompiled views.</param>
         public PrecompiledViewEngine(params Assembly[] assemblies)
         {
-            FallbackViewEngine = new RazorViewEngine();
-
             AreaViewLocationFormats = new[]
             {
-                "~/Areas/{2}/Views/{1}/{0}.cshtml", 
-                "~/Areas/{2}/Views/Shared/{0}.cshtml", 
+                "~/Areas/{2}/Views/{1}/{0}.cshtml",
+                "~/Areas/{2}/Views/Shared/{0}.cshtml",
             };
             AreaMasterLocationFormats = new[]
             {
-                "~/Areas/{2}/Views/{1}/{0}.cshtml", 
-                "~/Areas/{2}/Views/Shared/{0}.cshtml", 
+                "~/Areas/{2}/Views/{1}/{0}.cshtml",
+                "~/Areas/{2}/Views/Shared/{0}.cshtml",
             };
             AreaPartialViewLocationFormats = new[]
             {
-                "~/Areas/{2}/Views/{1}/{0}.cshtml", 
-                "~/Areas/{2}/Views/Shared/{0}.cshtml", 
+                "~/Areas/{2}/Views/{1}/{0}.cshtml",
+                "~/Areas/{2}/Views/Shared/{0}.cshtml",
             };
             FileExtensions = new[]
             {
-                "cshtml", 
+                "cshtml",
             };
             MasterLocationFormats = new[]
             {
-                "~/Views/{1}/{0}.cshtml", 
-                "~/Views/Shared/{0}.cshtml", 
+                "~/Views/{1}/{0}.cshtml",
+                "~/Views/Shared/{0}.cshtml",
             };
             PartialViewLocationFormats = new[]
             {
-                "~/Views/{1}/{0}.cshtml", 
-                "~/Views/Shared/{0}.cshtml", 
+                "~/Views/{1}/{0}.cshtml",
+                "~/Views/Shared/{0}.cshtml",
             };
             ViewLocationFormats = new[]
             {
-                "~/Views/{1}/{0}.cshtml", 
-                "~/Views/Shared/{0}.cshtml", 
+                "~/Views/{1}/{0}.cshtml",
+                "~/Views/Shared/{0}.cshtml",
             };
 
             _views = new Dictionary<string, Type>(StringComparer.InvariantCultureIgnoreCase);
@@ -259,11 +237,6 @@ namespace StackExchange.Precompilation
         private IDisposable DoProfileStep(string name)
         {
             return ProfileStep?.Invoke(name);
-        }
-
-        private void ReportViewThunk(string viewName)
-        {
-            ViewThunk?.Invoke(viewName);
         }
 
         private static string MakeVirtualPath(string absolutePath)
@@ -338,31 +311,13 @@ namespace StackExchange.Precompilation
 
         /// <inheritdoc />
         protected override IView CreatePartialView(ControllerContext controllerContext, string partialPath) =>
-            CreateViewImpl(partialPath, masterPath: null, runViewStart: false) ?? Thunk(controllerContext, partialPath);
+            CreateViewImpl(partialPath, masterPath: null, runViewStart: false);
 
         /// <inheritdoc />
         protected override IView CreateView(ControllerContext controllerContext, string viewPath, string masterPath) =>
-            CreateViewImpl(viewPath, masterPath, runViewStart: true) ?? Thunk(controllerContext, viewPath, masterPath);   
+            CreateViewImpl(viewPath, masterPath, runViewStart: true);
 
-        private IView Thunk(ControllerContext controllerContext, string partialPath)
-        {
-            using (DoProfileStep(nameof(CreatePartialViewThunk)))
-            {
-                ReportViewThunk(partialPath);
-                return CreatePartialViewThunk(FallbackViewEngine, controllerContext, partialPath);
-            }
-        }
-     
-
-        private IView Thunk(ControllerContext controllerContext, string viewPath, string masterPath)
-        {
-            using (DoProfileStep(nameof(CreateViewThunk)))
-            {
-                ReportViewThunk(viewPath);
-                return CreateViewThunk(FallbackViewEngine, controllerContext, viewPath, masterPath);
-            }
-        }
-
+        
         private Type TryLookupCompiledType(string viewPath)
         {
             Type compiledView;
@@ -382,12 +337,9 @@ namespace StackExchange.Precompilation
                 return null;
             }
 
-            if (runViewStart)
-            {
-                return new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, GetStartPage, this);
-            }
-
-            return new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, null, this);
+            return runViewStart
+                ? new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, GetStartPage, this)
+                : new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, null, this);
         }
 
         private WebPageRenderingBase GetStartPage(WebPageRenderingBase page, string fileName)
@@ -395,7 +347,7 @@ namespace StackExchange.Precompilation
             WebPageRenderingBase currentPage = page;
             var pageDirectory = VirtualPathUtility.GetDirectory(page.VirtualPath);
 
-            while (!String.IsNullOrEmpty(pageDirectory) && pageDirectory != "/")
+            while (!string.IsNullOrEmpty(pageDirectory) && pageDirectory != "/")
             {
                 var virtualPath = VirtualPathUtility.Combine(pageDirectory, fileName + ".cshtml");
 
@@ -420,25 +372,121 @@ namespace StackExchange.Precompilation
         /// <inheritdoc />
         public override ViewEngineResult FindPartialView(ControllerContext controllerContext, string partialViewName, bool useCache)
         {
-            var created = CreateViewImpl(partialViewName, null, false);
-            if (created != null)
-            {
-                return new ViewEngineResult(created, this);
-            }
+            if (controllerContext == null) throw new ArgumentNullException(nameof(controllerContext));
+            if (string.IsNullOrEmpty(partialViewName)) throw new ArgumentException("\"viewName\" argument cannot be null or empty.");
 
-            return base.FindPartialView(controllerContext, partialViewName, useCache);
+            var controllerName = controllerContext.RouteData.GetRequiredString("controller");
+            var areaName = AreaHelpers.GetAreaName(controllerContext.RouteData);
+
+            var locationsSearched = new List<string>(
+                ((PartialViewLocationFormats?.Length ?? 0) +
+                (areaName != null ? AreaPartialViewLocationFormats?.Length ?? 0 : 0))
+            );
+
+            var viewPath = ResolveViewPath(partialViewName, controllerName, areaName, PartialViewLocationFormats, AreaPartialViewLocationFormats, locationsSearched);
+
+            return string.IsNullOrEmpty(viewPath)
+                ? new ViewEngineResult(locationsSearched)
+                : new ViewEngineResult(CreatePartialView(controllerContext, viewPath), this);
         }
 
         /// <inheritdoc />
         public override ViewEngineResult FindView(ControllerContext controllerContext, string viewName, string masterName, bool useCache)
         {
-            var created = CreateViewImpl(viewName, masterName, true);
-            if (created != null)
+            // All this madness is essentially re-written from the VirtualPathProviderViewEngine class, but that class
+            // checks on things like cache and whether the file exists and a whole bunch of stuff that's unnecessary.
+            // Plus: unecessary allocations :(
+
+            if (controllerContext == null) throw new ArgumentNullException(nameof(controllerContext));
+            if (string.IsNullOrEmpty(viewName)) throw new ArgumentException("\"viewName\" argument cannot be null or empty.");
+
+            var controllerName = controllerContext.RouteData.GetRequiredString("controller");
+            var areaName = AreaHelpers.GetAreaName(controllerContext.RouteData);
+
+            // minimize re-allocations of List
+            var locationsSearched = new List<string>(
+                ((ViewLocationFormats?.Length ?? 0) +
+                (areaName != null ? AreaViewLocationFormats?.Length ?? 0 : 0)) + 
+                (MasterLocationFormats?.Length ?? 0) +
+                (areaName != null ? AreaMasterLocationFormats?.Length ?? 0 : 0)
+            );
+
+            var viewPath = ResolveViewPath(viewName, controllerName, areaName, ViewLocationFormats, AreaViewLocationFormats, locationsSearched);
+            var masterPath = ResolveViewPath(masterName, controllerName, areaName, MasterLocationFormats, AreaMasterLocationFormats, locationsSearched);
+
+            if (string.IsNullOrEmpty(viewPath) ||
+                (string.IsNullOrEmpty(masterPath) && !string.IsNullOrEmpty(masterName)))
             {
-                return new ViewEngineResult(created, this);
+                return new ViewEngineResult(locationsSearched);
             }
 
-            return base.FindView(controllerContext, viewName, masterName, useCache);
+            return new ViewEngineResult(CreateView(controllerContext, viewPath, masterPath), this);
+        }
+
+        private string ResolveViewPath(string viewName, string controllerName, string areaName, string[] viewLocationFormats, string[] areaViewLocationFormats, List<string> viewLocationsSearched)
+        {
+            if (IsSpecificPath(viewName))
+            {
+                var normalized = NormalizeViewName(viewName);
+                viewLocationsSearched.Add(viewName);
+                return _views.ContainsKey(normalized) ? normalized : null;
+            }
+
+            if (!string.IsNullOrEmpty(areaName) && areaViewLocationFormats != null)
+            {
+                foreach (var format in areaViewLocationFormats)
+                {
+                    var path = string.Format(format, viewName, controllerName, areaName);
+                    viewLocationsSearched.Add(path);
+                    if (_views.ContainsKey(path))
+                        return path;
+                }
+            }
+
+            if (viewLocationFormats == null)
+                return null;
+
+            foreach (var format in viewLocationFormats)
+            {
+                var path = string.Format(format, viewName, controllerName);
+                viewLocationsSearched.Add(path);
+                if (_views.ContainsKey(path))
+                    return path;
+            }
+
+            return null;
+        }
+
+        private static string NormalizeViewName(string viewName)
+        {
+            return viewName[0] == '/' ? ("~" + viewName) : viewName;
+        }
+
+        private static bool IsSpecificPath(string path) => path.Length > 0 && (path[0] == '~' || path[0] == '/');
+    }
+
+    // Hooray, another MVC5 class that should be public but ISN'T
+    internal static class AreaHelpers
+    {
+        public static string GetAreaName(RouteBase route)
+        {
+            var routeWithArea = route as IRouteWithArea;
+            if (routeWithArea != null)
+                return routeWithArea.Area;
+
+            var castRoute = route as Route;
+            return castRoute?.DataTokens?["area"] as string;
+        }
+
+        public static string GetAreaName(RouteData routeData)
+        {
+            object area;
+            if (routeData.DataTokens.TryGetValue("area", out area))
+            {
+                return area as string;
+            }
+
+            return GetAreaName(routeData.Route);
         }
     }
 }
