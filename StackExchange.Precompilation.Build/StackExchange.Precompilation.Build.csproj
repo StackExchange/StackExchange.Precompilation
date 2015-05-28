@@ -99,12 +99,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
-    <Reference Include="System.Runtime" />
-    <Reference Include="System.Collections" />
-    <Reference Include="System.IO" />
     <Reference Include="System.Text.Encoding" />
-    <Reference Include="System.Threading.Tasks" />
-    <Reference Include="System.Globalization" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CompilationProxy.cs" />

@@ -141,12 +141,10 @@ namespace StackExchange.Precompilation
         private static readonly Func<VirtualPathProviderViewEngine, ControllerContext, string, IView> CreatePartialViewThunk;
         private static readonly Func<VirtualPathProviderViewEngine, ControllerContext, string, string, IView> CreateViewThunk;
 
-        public static PrecompiledViewEngine LastInstance { get; private set; }
-
         static PrecompiledViewEngine()
         {
-            var createPartialViewMtd = typeof(VirtualPathProviderViewEngine).GetMethod("CreatePartialView", BindingFlags.NonPublic | BindingFlags.Instance);
-            var createViewMtd = typeof(VirtualPathProviderViewEngine).GetMethod("CreateView", BindingFlags.NonPublic | BindingFlags.Instance);
+            var createPartialViewMtd = typeof(VirtualPathProviderViewEngine).GetMethod(nameof(CreatePartialView), BindingFlags.NonPublic | BindingFlags.Instance);
+            var createViewMtd = typeof(VirtualPathProviderViewEngine).GetMethod(nameof(CreateView), BindingFlags.NonPublic | BindingFlags.Instance);
 
             CreatePartialViewThunk = (Func<VirtualPathProviderViewEngine, ControllerContext, string, IView>)Delegate.CreateDelegate(typeof(Func<VirtualPathProviderViewEngine, ControllerContext, string, IView>), createPartialViewMtd, throwOnBindFailure: true);
             CreateViewThunk = (Func<VirtualPathProviderViewEngine, ControllerContext, string, string, IView>)Delegate.CreateDelegate(typeof(Func<VirtualPathProviderViewEngine, ControllerContext, string, string, IView>), createViewMtd, throwOnBindFailure: true);
@@ -158,7 +156,11 @@ namespace StackExchange.Precompilation
         public IEnumerable<string> ViewPaths { get; private set; }
 
         private readonly Dictionary<string, Type> _views;
-        private readonly VirtualPathProviderViewEngine _backupEngine;
+
+        /// <summary>
+        /// Gets or sets the fallback view engine. This view engine is called when a precompiled view is not found.
+        /// </summary>
+        public VirtualPathProviderViewEngine FallbackViewEngine { get; set; }
 
         /// <summary>
         /// Triggers when the engine performs a step that can be profiled.
@@ -170,16 +172,27 @@ namespace StackExchange.Precompilation
         /// </summary>
         public Action<string> ViewThunk { get; set; }
 
+        /// <summary>
+        /// Creates a new PrecompiledViewEngine instance, scanning all assemblies in <paramref name="findAssembliesInPath"/> for precompiled views.
+        /// Precompiled views are types deriving from <see cref="WebPageRenderingBase"/> decorated with a <see cref="CompiledFromFileAttribute" />
+        /// </summary>
+        /// <param name="findAssembliesInPath">The path to scan for assemblies with precompiled views.</param>
+        /// <remarks>
+        /// Use this constructor if you use aspnet_compiler.exe with it's targetDir parameter instead of StackExchange.Precompilation.Build.
+        /// </remarks>
         public PrecompiledViewEngine(string findAssembliesInPath)
             : this(FindViewAssemblies(findAssembliesInPath).ToArray())
         {
         }
 
+        /// <summary>
+        /// Creates a new PrecompiledViewEngine instance, scanning the provided <paramref name="assemblies"/> for precompiled views.
+        /// Precompiled views are types deriving from <see cref="WebPageRenderingBase"/> decorated with a <see cref="CompiledFromFileAttribute" />
+        /// </summary>
+        /// <param name="assemblies">The assemblies to scan for precompiled views.</param>
         public PrecompiledViewEngine(params Assembly[] assemblies)
         {
-            LastInstance = this;
-
-            _backupEngine = new RazorViewEngine();
+            FallbackViewEngine = new RazorViewEngine();
 
             AreaViewLocationFormats = new[]
             {
@@ -245,12 +258,12 @@ namespace StackExchange.Precompilation
 
         private IDisposable DoProfileStep(string name)
         {
-            return (ProfileStep ?? (_ => (IDisposable)null))(name);
+            return ProfileStep?.Invoke(name);
         }
 
         private void ReportViewThunk(string viewName)
         {
-            (ViewThunk ?? delegate { })(viewName);
+            ViewThunk?.Invoke(viewName);
         }
 
         private static string MakeVirtualPath(string absolutePath)
@@ -323,29 +336,30 @@ namespace StackExchange.Precompilation
             return ret;
         }
 
-        protected override IView CreatePartialView(ControllerContext controllerContext, string partialPath)
+        /// <inheritdoc />
+        protected override IView CreatePartialView(ControllerContext controllerContext, string partialPath) =>
+            CreateViewImpl(partialPath, masterPath: null, runViewStart: false) ?? Thunk(controllerContext, partialPath);
+
+        /// <inheritdoc />
+        protected override IView CreateView(ControllerContext controllerContext, string viewPath, string masterPath) =>
+            CreateViewImpl(viewPath, masterPath, runViewStart: true) ?? Thunk(controllerContext, viewPath, masterPath);   
+
+        private IView Thunk(ControllerContext controllerContext, string partialPath)
         {
-            var compiledResult = CreateViewImpl(partialPath, masterPath: null, runViewStart: false);
-
-            if (compiledResult != null) return compiledResult;
-
-            using (DoProfileStep("CreatePartialViewThunk"))
+            using (DoProfileStep(nameof(CreatePartialViewThunk)))
             {
                 ReportViewThunk(partialPath);
-                return CreatePartialViewThunk(_backupEngine, controllerContext, partialPath);
+                return CreatePartialViewThunk(FallbackViewEngine, controllerContext, partialPath);
             }
         }
+     
 
-        protected override IView CreateView(ControllerContext controllerContext, string viewPath, string masterPath)
+        private IView Thunk(ControllerContext controllerContext, string viewPath, string masterPath)
         {
-            var compiledResult = CreateViewImpl(viewPath, masterPath, runViewStart: true);
-
-            if (compiledResult != null) return compiledResult;
-
-            using (DoProfileStep("CreateViewThunk"))
+            using (DoProfileStep(nameof(CreateViewThunk)))
             {
                 ReportViewThunk(viewPath);
-                return CreateViewThunk(_backupEngine, controllerContext, viewPath, masterPath);
+                return CreateViewThunk(FallbackViewEngine, controllerContext, viewPath, masterPath);
             }
         }
 
@@ -403,6 +417,7 @@ namespace StackExchange.Precompilation
             return currentPage;
         }
 
+        /// <inheritdoc />
         public override ViewEngineResult FindPartialView(ControllerContext controllerContext, string partialViewName, bool useCache)
         {
             var created = CreateViewImpl(partialViewName, null, false);
@@ -414,6 +429,7 @@ namespace StackExchange.Precompilation
             return base.FindPartialView(controllerContext, partialViewName, useCache);
         }
 
+        /// <inheritdoc />
         public override ViewEngineResult FindView(ControllerContext controllerContext, string viewName, string masterName, bool useCache)
         {
             var created = CreateViewImpl(viewName, masterName, true);

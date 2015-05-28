@@ -10,6 +10,11 @@ namespace StackExchange.Precompilation
     /// </summary>
     public class PrecompiledWebPageHost : MvcWebPageRazorHost
     {
+        /// <summary>
+        /// Creates a new <see cref="PrecompiledWebPageHost"/> instance.
+        /// </summary>
+        /// <param name="virtualPath"></param>
+        /// <param name="physicalPath"></param>
         public PrecompiledWebPageHost(string virtualPath, string physicalPath)
             : base(virtualPath, physicalPath)
         {
