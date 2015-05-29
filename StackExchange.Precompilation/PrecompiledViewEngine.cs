@@ -381,6 +381,11 @@ namespace StackExchange.Precompilation
 
         private string ResolveViewPath(string viewName, string controllerName, string areaName, string[] viewLocationFormats, string[] areaViewLocationFormats, List<string> viewLocationsSearched)
         {
+            if (string.IsNullOrEmpty(viewName))
+            {
+                return null;
+            }
+
             if (IsSpecificPath(viewName))
             {
                 var normalized = NormalizeViewName(viewName);
