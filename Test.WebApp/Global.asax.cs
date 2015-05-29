@@ -24,11 +24,6 @@ namespace Test.WebApp
                 );
 
             var precompiledViewEngine = new PrecompiledViewEngine(typeof(HomeController).Assembly);
-            
-            //precompiledViewEngine.ViewThunk += path =>
-            //{
-                //throw new Exception("Couldn't find precompiled view: " + path);
-            //};
 
             ViewEngines.Engines.Clear();
             ViewEngines.Engines.Add(precompiledViewEngine);
