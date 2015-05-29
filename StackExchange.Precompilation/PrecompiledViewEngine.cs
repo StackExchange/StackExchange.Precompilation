@@ -329,17 +329,14 @@ namespace StackExchange.Precompilation
         public override ViewEngineResult FindPartialView(ControllerContext controllerContext, string partialViewName, bool useCache)
         {
             if (controllerContext == null) throw new ArgumentNullException(nameof(controllerContext));
-            if (string.IsNullOrEmpty(partialViewName)) throw new ArgumentException("\"viewName\" argument cannot be null or empty.");
+            if (string.IsNullOrEmpty(partialViewName)) throw new ArgumentException($"\"{nameof(partialViewName)}\" argument cannot be null or empty.", nameof(partialViewName));
 
             var controllerName = controllerContext.RouteData.GetRequiredString("controller");
             var areaName = AreaHelpers.GetAreaName(controllerContext.RouteData);
 
             var locationsSearched = new List<string>(
-
                 ((PartialViewLocationFormats?.Length ?? 0) +
-
                 (areaName != null ? AreaPartialViewLocationFormats?.Length ?? 0 : 0))
-
             );
 
             var viewPath = ResolveViewPath(partialViewName, controllerName, areaName, PartialViewLocationFormats, AreaPartialViewLocationFormats, locationsSearched);
@@ -357,22 +354,17 @@ namespace StackExchange.Precompilation
             // Plus: unecessary allocations :(
 
             if (controllerContext == null) throw new ArgumentNullException(nameof(controllerContext));
-            if (string.IsNullOrEmpty(viewName)) throw new ArgumentException("\"viewName\" argument cannot be null or empty.");
+            if (string.IsNullOrEmpty(viewName)) throw new ArgumentException($"\"{nameof(viewName)}\" argument cannot be null or empty.", nameof(viewName));
 
             var controllerName = controllerContext.RouteData.GetRequiredString("controller");
             var areaName = AreaHelpers.GetAreaName(controllerContext.RouteData);
 
             // minimize re-allocations of List
             var locationsSearched = new List<string>(
-
                 ((ViewLocationFormats?.Length ?? 0) +
-
                 (areaName != null ? AreaViewLocationFormats?.Length ?? 0 : 0)) +
-
                 (MasterLocationFormats?.Length ?? 0) +
-
                 (areaName != null ? AreaMasterLocationFormats?.Length ?? 0 : 0)
-
             );
 
             var viewPath = ResolveViewPath(viewName, controllerName, areaName, ViewLocationFormats, AreaViewLocationFormats, locationsSearched);
@@ -408,7 +400,6 @@ namespace StackExchange.Precompilation
             }
 
             if (viewLocationFormats == null)
-
                 return null;
 
             foreach (var format in viewLocationFormats)
@@ -432,13 +423,9 @@ namespace StackExchange.Precompilation
 
     // Hooray, another MVC5 class that should be public but ISN'T
     internal static class AreaHelpers
-
     {
-
         public static string GetAreaName(RouteBase route)
-
         {
-
             var routeWithArea = route as IRouteWithArea;
             if (routeWithArea != null)
                 return routeWithArea.Area;
@@ -447,27 +434,15 @@ namespace StackExchange.Precompilation
             return castRoute?.DataTokens?["area"] as string;
         }
 
-
-
         public static string GetAreaName(RouteData routeData)
-
         {
-
             object area;
-
             if (routeData.DataTokens.TryGetValue("area", out area))
-
             {
-
                 return area as string;
-
             }
 
-
-
             return GetAreaName(routeData.Route);
-
         }
-
     }
 }
