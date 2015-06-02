@@ -15,7 +15,7 @@ namespace StackExchange.Precompilation
     /// <summary>
     /// Supports loading of precompiled views.
     /// </summary>
-    public class PrecompiledViewEngine : VirtualPathProviderViewEngine
+    public class PrecompiledViewEngine : ProfiledVirtualPathProviderViewEngine
     {
         private class PrecompiledVirtualPathFactory : IVirtualPathFactory
         {
@@ -133,11 +133,6 @@ namespace StackExchange.Precompilation
         private readonly Dictionary<string, Type> _views;
 
         /// <summary>
-        /// Triggers when the engine performs a step that can be profiled.
-        /// </summary>
-        public Func<string, IDisposable> ProfileStep { get; set; }
-
-        /// <summary>
         /// Creates a new PrecompiledViewEngine instance, scanning all assemblies in <paramref name="findAssembliesInPath"/> for precompiled views.
         /// Precompiled views are types deriving from <see cref="WebPageRenderingBase"/> decorated with a <see cref="CompiledFromFileAttribute" />
         /// </summary>
@@ -217,11 +212,6 @@ namespace StackExchange.Precompilation
             }
 
             ViewPaths = _views.Keys.OrderBy(_ => _).ToList();
-        }
-
-        private IDisposable DoProfileStep(string name)
-        {
-            return ProfileStep?.Invoke(name);
         }
 
         private static string MakeVirtualPath(string absolutePath)

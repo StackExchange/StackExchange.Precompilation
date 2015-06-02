@@ -11,7 +11,6 @@
     <language>en-US</language>
     <dependencies>
       <dependency id="StackExchange.Precompilation" version="$version$" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.0.0-rc2" />
     </dependencies>
   </metadata>
   <files>

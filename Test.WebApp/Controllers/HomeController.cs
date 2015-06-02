@@ -10,9 +10,15 @@ namespace Test.WebApp.Controllers
     {
         public ActionResult Index()
         {
+            IEnumerable<string> viewPaths;
+#if DEBUG
+            viewPaths = new string[] { "We don't keep track of the views in the RoslynRazorViewEngine." };
+#else
             var viewEngine = ViewEngines.Engines.OfType<PrecompiledViewEngine>().Single();
+            viewPaths = viewEngine.ViewPaths;
+#endif
 
-            return View(new Models.SampleModel { ViewPaths = viewEngine.ViewPaths });
+            return View(new Models.SampleModel { ViewPaths = viewPaths });
         }
     }
 }

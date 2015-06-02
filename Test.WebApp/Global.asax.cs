@@ -23,10 +23,13 @@ namespace Test.WebApp
                 defaults: new { controller = "Home", action = "Index", id = UrlParameter.Optional }
                 );
 
-            var precompiledViewEngine = new PrecompiledViewEngine(typeof(HomeController).Assembly);
-
             ViewEngines.Engines.Clear();
-            ViewEngines.Engines.Add(precompiledViewEngine);
+#if !DEBUG
+            // use precompiled engine first (supports some C# 6),
+            ViewEngines.Engines.Add(new PrecompiledViewEngine(typeof(HomeController).Assembly));
+#endif
+            // fallback to RoslynRazorViewEngine (RazorViewEngine doesn't support C# 6).
+            ViewEngines.Engines.Add(new RoslynRazorViewEngine());
         }
     }
 }
