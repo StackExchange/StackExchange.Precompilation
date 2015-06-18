@@ -385,7 +385,7 @@ namespace StackExchange.Precompilation
                 return _views.ContainsKey(normalized) ? normalized : null;
             }
 
-            areaViewLocationFormats = areaName == null ? null : areaViewLocationFormats ?? new string[0];
+            areaViewLocationFormats = (areaName == null ? null : areaViewLocationFormats) ?? new string[0];
             viewLocationFormats = viewLocationFormats ?? new string[0];
 
             var httpContext = controllerContext.HttpContext;
