@@ -392,15 +392,15 @@ namespace StackExchange.Precompilation
             var availableDisplayModes = DisplayModeProvider.GetAvailableDisplayModesForContext(httpContext, controllerContext.DisplayMode);
             foreach (var displayMode in availableDisplayModes)
             {
-                foreach (var format in areaViewLocationFormats)
+                for (var i = 0; i < areaViewLocationFormats.Length; i++)
                 {
-                    var path = string.Format(format, viewName, controllerName, areaName);
+                    var path = string.Format(areaViewLocationFormats[i], viewName, controllerName, areaName);
                     if (TryResolveView(httpContext, displayMode, ref path, viewLocationsSearched)) return path;
                 }
 
-                foreach (var format in viewLocationFormats)
+                for (var i = 0; i < viewLocationFormats.Length; i++)
                 {
-                    var path = string.Format(format, viewName, controllerName);
+                    var path = string.Format(viewLocationFormats[i], viewName, controllerName);
                     if (TryResolveView(httpContext, displayMode, ref path, viewLocationsSearched)) return path;
                 }
             }
