@@ -321,15 +321,15 @@ namespace StackExchange.Precompilation
             if (controllerContext == null) throw new ArgumentNullException(nameof(controllerContext));
             if (string.IsNullOrEmpty(partialViewName)) throw new ArgumentException($"\"{nameof(partialViewName)}\" argument cannot be null or empty.", nameof(partialViewName));
 
-            var controllerName = controllerContext.RouteData.GetRequiredString("controller");
             var areaName = AreaHelpers.GetAreaName(controllerContext.RouteData);
 
             var locationsSearched = new List<string>(
-                ((PartialViewLocationFormats?.Length ?? 0) +
-                (areaName != null ? AreaPartialViewLocationFormats?.Length ?? 0 : 0))
+                DisplayModeProvider.Modes.Count * (
+                    ((PartialViewLocationFormats?.Length ?? 0) +
+                    (areaName != null ? AreaPartialViewLocationFormats?.Length ?? 0 : 0)))
             );
 
-            var viewPath = ResolveViewPath(partialViewName, controllerName, areaName, PartialViewLocationFormats, AreaPartialViewLocationFormats, locationsSearched);
+            var viewPath = ResolveViewPath(partialViewName, areaName, PartialViewLocationFormats, AreaPartialViewLocationFormats, locationsSearched, controllerContext);
 
             return string.IsNullOrEmpty(viewPath)
                 ? new ViewEngineResult(locationsSearched)
@@ -346,19 +346,19 @@ namespace StackExchange.Precompilation
             if (controllerContext == null) throw new ArgumentNullException(nameof(controllerContext));
             if (string.IsNullOrEmpty(viewName)) throw new ArgumentException($"\"{nameof(viewName)}\" argument cannot be null or empty.", nameof(viewName));
 
-            var controllerName = controllerContext.RouteData.GetRequiredString("controller");
             var areaName = AreaHelpers.GetAreaName(controllerContext.RouteData);
 
             // minimize re-allocations of List
             var locationsSearched = new List<string>(
-                ((ViewLocationFormats?.Length ?? 0) +
-                (areaName != null ? AreaViewLocationFormats?.Length ?? 0 : 0)) +
-                (MasterLocationFormats?.Length ?? 0) +
-                (areaName != null ? AreaMasterLocationFormats?.Length ?? 0 : 0)
+                DisplayModeProvider.Modes.Count * (
+                    ((ViewLocationFormats?.Length ?? 0) +
+                    (areaName != null ? AreaViewLocationFormats?.Length ?? 0 : 0)) +
+                    (MasterLocationFormats?.Length ?? 0) +
+                    (areaName != null ? AreaMasterLocationFormats?.Length ?? 0 : 0))
             );
 
-            var viewPath = ResolveViewPath(viewName, controllerName, areaName, ViewLocationFormats, AreaViewLocationFormats, locationsSearched);
-            var masterPath = ResolveViewPath(masterName, controllerName, areaName, MasterLocationFormats, AreaMasterLocationFormats, locationsSearched);
+            var viewPath = ResolveViewPath(viewName, areaName, ViewLocationFormats, AreaViewLocationFormats, locationsSearched, controllerContext);
+            var masterPath = ResolveViewPath(masterName, areaName, MasterLocationFormats, AreaMasterLocationFormats, locationsSearched, controllerContext);
 
             if (string.IsNullOrEmpty(viewPath) ||
                 (string.IsNullOrEmpty(masterPath) && !string.IsNullOrEmpty(masterName)))
@@ -369,43 +369,57 @@ namespace StackExchange.Precompilation
             return new ViewEngineResult(CreateView(controllerContext, viewPath, masterPath), this);
         }
 
-        private string ResolveViewPath(string viewName, string controllerName, string areaName, string[] viewLocationFormats, string[] areaViewLocationFormats, List<string> viewLocationsSearched)
+        private string ResolveViewPath(string viewName, string areaName, string[] viewLocationFormats, string[] areaViewLocationFormats, List<string> viewLocationsSearched, ControllerContext controllerContext)
         {
             if (string.IsNullOrEmpty(viewName))
             {
                 return null;
             }
 
+            var controllerName = controllerContext.RouteData.GetRequiredString("controller");
             if (IsSpecificPath(viewName))
             {
                 var normalized = NormalizeViewName(viewName);
+
                 viewLocationsSearched.Add(viewName);
                 return _views.ContainsKey(normalized) ? normalized : null;
             }
 
-            if (!string.IsNullOrEmpty(areaName) && areaViewLocationFormats != null)
+            areaViewLocationFormats = areaName == null ? null : areaViewLocationFormats ?? new string[0];
+            viewLocationFormats = viewLocationFormats ?? new string[0];
+
+            var httpContext = controllerContext.HttpContext;
+            var availableDisplayModes = DisplayModeProvider.GetAvailableDisplayModesForContext(httpContext, controllerContext.DisplayMode);
+            foreach (var displayMode in availableDisplayModes)
             {
                 foreach (var format in areaViewLocationFormats)
                 {
                     var path = string.Format(format, viewName, controllerName, areaName);
-                    viewLocationsSearched.Add(path);
-                    if (_views.ContainsKey(path))
-                        return path;
+                    if (TryResolveView(httpContext, displayMode, ref path, viewLocationsSearched)) return path;
+                }
+
+                foreach (var format in viewLocationFormats)
+                {
+                    var path = string.Format(format, viewName, controllerName);
+                    if (TryResolveView(httpContext, displayMode, ref path, viewLocationsSearched)) return path;
                 }
             }
 
-            if (viewLocationFormats == null)
-                return null;
+            return null;
+        }
 
-            foreach (var format in viewLocationFormats)
+        private bool TryResolveView(HttpContextBase httpContext, IDisplayMode displayMode, ref string path, ICollection<string> viewLocationsSearched)
+        {
+            var displayInfo = displayMode.GetDisplayInfo(httpContext, path, _views.ContainsKey);
+
+            if (displayInfo != null || displayInfo.FilePath == null)
             {
-                var path = string.Format(format, viewName, controllerName);
                 viewLocationsSearched.Add(path);
-                if (_views.ContainsKey(path))
-                    return path;
+                return false;
             }
 
-            return null;
+            path = displayInfo.FilePath;
+            return true;
         }
 
         private static string NormalizeViewName(string viewName)

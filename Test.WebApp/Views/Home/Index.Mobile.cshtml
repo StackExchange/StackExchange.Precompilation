@@ -1,0 +1,15 @@
+﻿@model SampleModel
+@{
+    ViewBag.Title = "Test Page";
+}
+Mobile Precompiled View Paths:
+<ul>
+    @foreach (var path in Model.ViewPaths)
+    {
+        <li>@path</li>
+    }
+</ul>
+
+@Html.EditorForModel()
+
+@Helpers.Test()
