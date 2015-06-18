@@ -412,7 +412,7 @@ namespace StackExchange.Precompilation
         {
             var displayInfo = displayMode.GetDisplayInfo(httpContext, path, _views.ContainsKey);
 
-            if (displayInfo != null || displayInfo.FilePath == null)
+            if (displayInfo == null || displayInfo.FilePath == null)
             {
                 viewLocationsSearched.Add(path);
                 return false;
