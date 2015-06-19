@@ -104,8 +104,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CompiledFromFileAttribute.cs" />
-    <Compile Include="PrecompiledMvcWebRazorHostFactory.cs" />
-    <Compile Include="PrecompiledWebPageHost.cs" />
     <Compile Include="PrecompiledViewEngine.cs" />
     <Compile Include="ProfiledVirtualPathProviderViewEngine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

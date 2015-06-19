@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.IO;
 using System.Web.Configuration;
@@ -37,6 +39,17 @@ namespace StackExchange.Precompilation
                 {
                     var engine = new RazorTemplateEngine(host);
                     var razorOut = engine.GenerateCode(rdr, null, null, viewFullPath);
+
+                    // add the CompiledFromFileAttribute to the generated class
+                    razorOut.GeneratedCode
+                        .Namespaces.OfType<CodeNamespace>().FirstOrDefault()?
+                        .Types.OfType<CodeTypeDeclaration>().FirstOrDefault()?
+                        .CustomAttributes.Add(
+                            new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(CompiledFromFileAttribute)),
+                                new CodeAttributeArgument(new CodePrimitiveExpression(viewFullPath))
+                            ));
+
                     var codeGenOptions = new CodeGeneratorOptions { VerbatimOrder = true, ElseOnClosing = false, BlankLinesBetweenMembers = false };
                     provider.GenerateCodeFromCompileUnit(razorOut.GeneratedCode, generatedWriter, codeGenOptions);
 
