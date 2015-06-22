@@ -190,7 +190,7 @@ namespace StackExchange.Precompilation
             var compilation = CSharpCompilation.Create(
                 "RoslynRazor", // Note: using a fixed assembly name, which doesn't matter as long as we don't expect cross references of generated assemblies
                 new[] { syntaxTree },
-                BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(MetadataReference.CreateFromAssembly),
+                BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(a => MetadataReference.CreateFromFile(a.Location)),
                 new CSharpCompilationOptions(
                     outputKind: OutputKind.DynamicallyLinkedLibrary,
                     assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default,
