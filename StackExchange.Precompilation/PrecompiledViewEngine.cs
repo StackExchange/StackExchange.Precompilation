@@ -85,28 +85,32 @@ namespace StackExchange.Precompilation
                 ViewEngine = viewEngine;
             }
 
-            private WebViewPage CreatePage(ViewContext viewContext, System.IO.TextWriter writer, out WebPageContext pageContext, out WebPageRenderingBase startPage)
+            private WebPageBase CreatePage(ViewContext viewContext, System.IO.TextWriter writer, out WebPageContext pageContext, out WebPageRenderingBase startPage)
             {
-                var webViewPage = (WebViewPage)Activator.CreateInstance(Compiled);
+                var basePage = (WebPageBase)Activator.CreateInstance(Compiled);
+                basePage.VirtualPath = Path;
+                basePage.VirtualPathFactory = new PrecompiledVirtualPathFactory(CompiledTypeLookup, basePage.VirtualPathFactory);
 
-                if (!string.IsNullOrEmpty(MasterPath))
-                {
-                    LayoutSetter(webViewPage, MasterPath);
-                }
-
-                webViewPage.VirtualPath = Path;
-                webViewPage.ViewContext = viewContext;
-                webViewPage.ViewData = viewContext.ViewData;
-                webViewPage.InitHelpers();
-                webViewPage.VirtualPathFactory = new PrecompiledVirtualPathFactory(CompiledTypeLookup, webViewPage.VirtualPathFactory);
-
-                pageContext = new WebPageContext(viewContext.HttpContext, webViewPage, null);
+                pageContext = new WebPageContext(viewContext.HttpContext, basePage, null);
 
                 startPage = RunViewStart
-                    ? StartPage.GetStartPage(webViewPage, "_ViewStart", ViewEngine.FileExtensions)
+                    ? StartPage.GetStartPage(basePage, "_ViewStart", ViewEngine.FileExtensions)
                     : null;
 
-                return webViewPage;
+                var viewPage = basePage as WebViewPage;
+                if (viewPage != null)
+                {
+                    if (!string.IsNullOrEmpty(MasterPath))
+                    {
+                        LayoutSetter(viewPage, MasterPath);
+                    }
+
+                    viewPage.ViewContext = viewContext;
+                    viewPage.ViewData = viewContext.ViewData;
+                    viewPage.InitHelpers();
+                }
+
+                return basePage;
             }
 
             public void Render(ViewContext viewContext, System.IO.TextWriter writer)
@@ -201,12 +205,15 @@ namespace StackExchange.Precompilation
                     throw e;
                 }
 
+
+                var sourceDirectory = asm.GetCustomAttribute<CompiledFromDirectoryAttribute>()?.SourceDirectory;
+
                 foreach (var view in viewTypes)
                 {
                     var attr = view.GetCustomAttribute<CompiledFromFileAttribute>();
                     if (attr != null)
                     {
-                        _views[MakeVirtualPath(attr.SourceFile)] = view;
+                        _views[MakeVirtualPath(attr.SourceFile, sourceDirectory)] = view;
                     }
                 }
             }
@@ -214,27 +221,34 @@ namespace StackExchange.Precompilation
             ViewPaths = _views.Keys.OrderBy(_ => _).ToList();
         }
 
-        private static string MakeVirtualPath(string absolutePath)
+        private static string MakeVirtualPath(string absoluteViewPath, string absoluteDirectoryPath = null)
         {
-            var firstArea = absolutePath.IndexOf(@"\Areas\");
+            if (absoluteDirectoryPath != null && absoluteViewPath.StartsWith(absoluteDirectoryPath))
+            {
+                return MakeVirtualPath(absoluteViewPath, absoluteDirectoryPath.Length - (absoluteDirectoryPath.EndsWith("\\") ? 1 : 0));
+            }
 
+            // we could just bail here, but let's make a best effort...
+            var firstArea = absoluteViewPath.IndexOf(@"\Areas\");
             if (firstArea != -1)
             {
-                var tail = absolutePath.Substring(firstArea);
-                var vp = "~" + tail.Replace(@"\", "/");
-
-                return vp;
+                return MakeVirtualPath(absoluteViewPath, firstArea);
             }
             else
             {
-                var firstView = absolutePath.IndexOf(@"\Views\");
-                if (firstView == -1) throw new Exception("Couldn't convert: " + absolutePath);
+                var firstView = absoluteViewPath.IndexOf(@"\Views\");
+                if (firstView == -1) throw new Exception("Couldn't make virtual for: " + absoluteViewPath);
 
-                var tail = absolutePath.Substring(firstView);
-                var vp = "~" + tail.Replace(@"\", "/");
-
-                return vp;
+                return MakeVirtualPath(absoluteViewPath, firstView);
             }
+        }
+
+        private static string MakeVirtualPath(string absoluteViewPath, int startIndex)
+        {
+            var tail = absoluteViewPath.Substring(startIndex);
+            var vp = "~" + tail.Replace(@"\", "/");
+
+            return vp;
         }
 
         private static List<Assembly> FindViewAssemblies(string dirPath)

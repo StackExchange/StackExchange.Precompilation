@@ -235,7 +235,12 @@ namespace StackExchange.Precompilation
                     }
                 });
 
-            return trees.Where(x => x != null);
+            return trees.Where(x => x != null).Concat(GeneratedSyntaxTrees());
+        }
+
+        private IEnumerable<SyntaxTree> GeneratedSyntaxTrees()
+        {
+            yield return SyntaxFactory.ParseSyntaxTree($"[assembly: {typeof(CompiledFromDirectoryAttribute).FullName}(@\"{CurrentDirectory.FullName}\")]");
         }
 
         public Location AsLocation(string path)
