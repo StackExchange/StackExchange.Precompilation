@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using System;
+using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using System.Web.Compilation;
 using System.Web.Hosting;
 using System.Web.Mvc;
 using System.Web.Razor;
+using System.Web.Razor.Generator;
 using System.Web.Razor.Parser.SyntaxTree;
 using System.Web.WebPages;
 using System.Web.WebPages.Razor;
@@ -134,11 +136,15 @@ namespace StackExchange.Precompilation
             return type;
         }
 
+
         private Type GetTypeFromVirtualPathNoCache(string virtualPath)
         {
             using (DoProfileStep($"{nameof(RoslynRazorViewEngine)}: Compiling {virtualPath}"))
             {
-                var host = WebRazorHostFactory.CreateHostFromConfig(virtualPath);
+                OnCodeGenerationStarted();
+                var args = new CompilingPathEventArgs(virtualPath, WebRazorHostFactory.CreateHostFromConfig(virtualPath));
+                OnBeforeCompilePath(args);
+                var host = args.Host;
                 var razorResult = RunRazorGenerator(virtualPath, host);
                 var syntaxTree = GetSyntaxTree(host, razorResult);
                 var assembly = CompileToAssembly(host, syntaxTree);
@@ -158,6 +164,7 @@ namespace StackExchange.Precompilation
                 {
                     throw CreateExceptionFromParserError(razorResult.ParserErrors.Last(), virtualPath);
                 }
+                OnCodeGenerationCompleted(razorResult.GeneratedCode, host);
                 return razorResult;
             }
         }
@@ -216,6 +223,34 @@ namespace StackExchange.Precompilation
 
         private static HttpParseException CreateExceptionFromParserError(RazorError error, string virtualPath) =>
             new HttpParseException(error.Message + Environment.NewLine, null, virtualPath, null, error.Location.LineIndex + 1);
+
+        /// <summary>
+        /// This is the equivalent of the <see cref="RazorBuildProvider.CompilingPath"/> event, since <see cref="PrecompiledViewEngine"/> bypasses <see cref="RazorBuildProvider"/> completely.
+        /// </summary>
+        public static event EventHandler<CompilingPathEventArgs> CompilingPath;
+
+        /// <summary>
+        /// Raises the <see cref="CompilingPath"/> event.
+        /// </summary>
+        /// <param name="args"></param>
+        protected virtual void OnBeforeCompilePath(CompilingPathEventArgs args) =>
+            CompilingPath?.Invoke(this, args);
+
+        /// <summary>
+        /// This is the equivalent of the <see cref="RazorBuildProvider.CodeGenerationStarted"/> event, since <see cref="PrecompiledViewEngine"/> bypasses <see cref="RazorBuildProvider"/> completely.
+        /// </summary>
+        public static event EventHandler CodeGenerationStarted;
+
+        private void OnCodeGenerationStarted() =>
+            CodeGenerationStarted?.Invoke(this, EventArgs.Empty);
+
+        /// <summary>
+        /// This is the equivalent of the <see cref="RazorBuildProvider.CodeGenerationCompleted"/> event, since <see cref="PrecompiledViewEngine"/> bypasses <see cref="RazorBuildProvider"/> completely.
+        /// </summary>
+        public static event EventHandler<CodeGenerationCompleteEventArgs> CodeGenerationCompleted;
+
+        private void OnCodeGenerationCompleted(CodeCompileUnit codeCompileUnit, WebPageRazorHost host) =>
+           CodeGenerationCompleted?.Invoke(this, new CodeGenerationCompleteEventArgs(host.VirtualPath, host.PhysicalPath, codeCompileUnit));
     }
 }
 
