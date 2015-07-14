@@ -5,9 +5,11 @@ using Microsoft.CodeAnalysis.Text;
 using System;
 using System.CodeDom;
 using System.CodeDom.Compiler;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Web;
 using System.Web.Compilation;
 using System.Web.Hosting;
@@ -193,12 +195,24 @@ namespace StackExchange.Precompilation
             }
         }
 
+        // we were getting OutOfMemory exceptions caused by MetadataReference.CreateFrom* creating 
+        // System.Reflection.PortableExecutable.PEReader instances for the same assembly for each view being compiled
+        private static readonly ConcurrentDictionary<string, Lazy<MetadataReference>> ReferenceCache = new ConcurrentDictionary<string, Lazy<MetadataReference>>();
+        private static readonly Func<Assembly, MetadataReference> ResolveReference = assembly =>
+        {
+            return ReferenceCache.GetOrAdd(
+                assembly.Location,
+                loc => new Lazy<MetadataReference>(
+                    () => MetadataReference.CreateFromFile(loc),
+                    LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        };
+
         private static Assembly CompileToAssembly(WebPageRazorHost host, SyntaxTree syntaxTree)
         {
             var compilation = CSharpCompilation.Create(
                 "RoslynRazor", // Note: using a fixed assembly name, which doesn't matter as long as we don't expect cross references of generated assemblies
                 new[] { syntaxTree },
-                BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(a => MetadataReference.CreateFromFile(a.Location)),
+                BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(ResolveReference),
                 new CSharpCompilationOptions(
                     outputKind: OutputKind.DynamicallyLinkedLibrary,
                     assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default,
