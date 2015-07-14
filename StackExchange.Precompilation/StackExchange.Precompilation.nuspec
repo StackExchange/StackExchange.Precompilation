@@ -11,7 +11,7 @@
     <language>en-US</language>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.0.0-rc3" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.0.0" />
     </dependencies>
   </metadata>
   <files>
