@@ -88,27 +88,28 @@ namespace StackExchange.Precompilation
 
             public void Render(ViewContext viewContext, TextWriter writer)
             {
-                var instance = Activator.CreateInstance(_type);
-                var webViewPage = instance as WebViewPage;
-                if (webViewPage == null)
+                var basePage = (WebPageBase)Activator.CreateInstance(_type);
+                if (basePage == null)
                 {
                     throw new InvalidOperationException("Invalid view type: " + _virtualPath);
                 }
+                basePage.VirtualPath = _virtualPath;
+                basePage.VirtualPathFactory = this;
 
-                webViewPage.VirtualPathFactory = this;
-                webViewPage.VirtualPath = _virtualPath;
-                webViewPage.ViewContext = viewContext;
-                webViewPage.ViewData = viewContext.ViewData;
-                webViewPage.InitHelpers();
+                var startPage = _runViewStartPages
+                    ? StartPage.GetStartPage(basePage, "_ViewStart", _viewEngine.FileExtensions)
+                    : null;
 
-                WebPageRenderingBase startPage = null;
-                if (_runViewStartPages)
+                var webViewPage = basePage as WebViewPage;
+                if (webViewPage != null)
                 {
-                    startPage = StartPage.GetStartPage(webViewPage, "_ViewStart", _viewEngine.FileExtensions);
+                    webViewPage.ViewContext = viewContext;
+                    webViewPage.ViewData = viewContext.ViewData;
+                    webViewPage.InitHelpers();
                 }
 
-                var pageContext = new WebPageContext(viewContext.HttpContext, webViewPage, null);
-                webViewPage.ExecutePageHierarchy(pageContext, writer, startPage);
+                var pageContext = new WebPageContext(viewContext.HttpContext, basePage, null);
+                basePage.ExecutePageHierarchy(pageContext, writer, startPage);
             }
 
             public object CreateInstance(string virtualPath) =>
