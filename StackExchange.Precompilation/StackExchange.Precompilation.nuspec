@@ -3,15 +3,18 @@
   <metadata>
     <id>StackExchange.Precompilation</id>
     <version>$version$</version>
-    <authors>SE inc</authors>
-    <owners>SE inc</owners>
+    <authors>Stack Exchange inc.</authors>
+    <owners>m0sa</owners>
+    <projectUrl>https://github.com/StackExchange/StackExchange.Precompilation</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Hooks into the ASP.NET MVC pipeline to simplify usage of views precompiled with StackExchange.Precompilation.Build</description>
     <summary>StackExchange Precompilation Package</summary>
-    <description>Hooks into the ASP.NET MVC pipeline to simplify usage views precompiled with StackExchange.Precompilation.Build</description>
-    <tags>Razor</tags>
+    <copyright>Stack Exchange 2015</copyright>
     <language>en-US</language>
+    <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.0.0" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.1.0" />
     </dependencies>
   </metadata>
   <files>
