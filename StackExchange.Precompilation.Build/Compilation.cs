@@ -162,7 +162,7 @@ namespace StackExchange.Precompilation
             using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? File.Create(CscArgs.DocumentationPath) : null)
             using (var win32Resources = CreateWin32Resource(compilation))
             {
-                //
+                // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
                 var emitResult = compilation.Emit(
                     peStream: peStream,
                     pdbStream: pdbStream,
