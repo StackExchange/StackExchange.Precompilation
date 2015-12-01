@@ -80,7 +80,7 @@ namespace StackExchange.Precompilation
                 var compilationModules = LoadModules().ToList();
 
                 var compilation = CSharpCompilation.Create(
-                    options: CscArgs.CompilationOptions.WithAssemblyIdentityComparer(DesktopAssemblyIdentityComparer.Default),
+                    options: CscArgs.CompilationOptions.WithAssemblyIdentityComparer(GetAssemblyIdentityComparer()),
                     references: references,
                     syntaxTrees: sources,
                     assemblyName: CscArgs.CompilationName);
@@ -101,6 +101,18 @@ namespace StackExchange.Precompilation
             finally
             {
                 Diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
+            }
+        }
+
+        private DesktopAssemblyIdentityComparer GetAssemblyIdentityComparer()
+        {
+            // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/CSharp/Portable/CommandLine/CSharpCompiler.cs#L105
+            if (CscArgs.AppConfigPath == null)
+                return DesktopAssemblyIdentityComparer.Default;
+
+            using (var appConfigStream = File.OpenRead(CscArgs.AppConfigPath))
+            {
+                return DesktopAssemblyIdentityComparer.LoadFromXml(appConfigStream);
             }
         }
 
