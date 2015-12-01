@@ -132,6 +132,16 @@ namespace StackExchange.Precompilation
             }
         }
 
+        private Stream CreateWin32Resource(CSharpCompilation compilation)
+        {
+            if (CscArgs.Win32ResourceFile != null)
+                return File.OpenRead(CscArgs.Win32ResourceFile);
+
+            using (var manifestStream = compilation.Options.OutputKind != OutputKind.NetModule ? CscArgs.Win32Manifest != null ? File.OpenRead(CscArgs.Win32Manifest) : null : null)
+            using (var iconStream = CscArgs.Win32Icon != null ? File.OpenRead(CscArgs.Win32Icon) : null)
+                return compilation.CreateDefaultWin32Resources(true, CscArgs.NoWin32Manifest, manifestStream, iconStream);
+        }
+
         private EmitResult Emit(CompileContext context)
         {
             var compilation = context.BeforeCompileContext.Compilation;
@@ -150,19 +160,17 @@ namespace StackExchange.Precompilation
             using (var peStream = File.Create(outputPath))
             using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? File.Create(pdbPath) : null)
             using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? File.Create(CscArgs.DocumentationPath) : null)
-            using (var win32Resources = compilation.CreateDefaultWin32Resources(
-                versionResource: true,
-                noManifest: CscArgs.NoWin32Manifest,
-                manifestContents: !string.IsNullOrWhiteSpace(CscArgs.Win32Manifest) ? new MemoryStream(File.ReadAllBytes(CscArgs.Win32Manifest)) : null,
-                iconInIcoFormat: !string.IsNullOrWhiteSpace(CscArgs.Win32Icon) ? new MemoryStream(File.ReadAllBytes(CscArgs.Win32Icon)) : null))
+            using (var win32Resources = CreateWin32Resource(compilation))
             {
+                //
                 var emitResult = compilation.Emit(
                     peStream: peStream,
                     pdbStream: pdbStream,
                     xmlDocumentationStream: xmlDocumentationStream,
-                    options: CscArgs.EmitOptions,
+                    win32Resources: win32Resources,
                     manifestResources: CscArgs.ManifestResources,
-                    win32Resources: win32Resources);
+                    options: CscArgs.EmitOptions,
+                    debugEntryPoint: null);
 
                 Diagnostics.AddRange(emitResult.Diagnostics);
                 context.After(new AfterCompileContext
