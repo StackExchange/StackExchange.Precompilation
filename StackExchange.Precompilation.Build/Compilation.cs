@@ -75,7 +75,7 @@ namespace StackExchange.Precompilation
                 Encoding = CscArgs.Encoding ?? Encoding.UTF8;
 
                 var references = SetupReferences();
-                var sources = LoadSources(CscArgs.SourceFiles.Select(x => x.Path).ToArray());
+                var sources = LoadSources(CscArgs.SourceFiles);
 
                 var compilationModules = LoadModules().ToList();
 
@@ -234,19 +234,24 @@ namespace StackExchange.Precompilation
             return _precompilationCommandLineArgs.References.Select(x => (MetadataReference)MetadataReference.CreateFromFile(x, MetadataReferenceProperties.Assembly)).ToArray();
         }
 
-        private IEnumerable<SyntaxTree> LoadSources(ICollection<string> paths)
+        private IEnumerable<SyntaxTree> LoadSources(ICollection<CommandLineSourceFile> paths)
         {
             var trees = new SyntaxTree[paths.Count];
+            var parseOptions = CscArgs.ParseOptions;
+            var scriptParseOptions = CscArgs.ParseOptions.WithKind(SourceCodeKind.Script);
+
             Parallel.ForEach(paths,
-                (file, state, index) =>
+                (path, state, index) =>
                 {
+                    var file = path.Path;
                     var ext = Path.GetExtension(file) ?? "";
                     Lazy<Parser> parser;
                     if(_syntaxTreeLoaders.TryGetValue(ext, out parser))
                     {
-                        using (var sourceStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                        // bufferSize: 1 -> https://github.com/dotnet/roslyn/blob/ec1ea081ff5d84e91cbcb3b2f824655609cc5fc6/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L143
+                        using (var sourceStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1))
                         {
-                            trees[index] = parser.Value.GetSyntaxTree(file, sourceStream);
+                            trees[index] = parser.Value.GetSyntaxTree(file, sourceStream, path.IsScript ? scriptParseOptions : parseOptions);
                         }
                     }
                     else
