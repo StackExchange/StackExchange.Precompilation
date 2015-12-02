@@ -8,6 +8,7 @@ using System.Web.Razor;
 using System.Web.WebPages.Razor;
 using System.Web.WebPages.Razor.Configuration;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace StackExchange.Precompilation
 {
@@ -20,7 +21,7 @@ namespace StackExchange.Precompilation
             _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(Compilation.CurrentDirectory.FullName, true) } } };
         }
 
-        public override SyntaxTree GetSyntaxTree(string sourcePath, Stream sourceStream)
+        public override SyntaxTree GetSyntaxTree(string sourcePath, Stream sourceStream, CSharpParseOptions parseOptions)
         {
             try
             {
@@ -57,7 +58,7 @@ namespace StackExchange.Precompilation
                     generatedWriter.Flush();
                     generatedStream.Position = 0;
 
-                    return base.GetSyntaxTree(sourcePath, generatedStream);
+                    return base.GetSyntaxTree(sourcePath, generatedStream, parseOptions);
                 }
             }
             catch (Exception ex)

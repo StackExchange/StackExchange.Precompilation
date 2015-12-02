@@ -1,5 +1,6 @@
 using System.IO;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace StackExchange.Precompilation
 {
@@ -10,6 +11,6 @@ namespace StackExchange.Precompilation
         {
             Compilation = compilation;
         }
-        public abstract SyntaxTree GetSyntaxTree(string sourcePath, Stream sourceStream);
+        public abstract SyntaxTree GetSyntaxTree(string sourcePath, Stream sourceStream, CSharpParseOptions parseOptions);
     }
 }
