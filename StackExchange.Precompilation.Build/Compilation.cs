@@ -72,7 +72,7 @@ namespace StackExchange.Precompilation
                 {
                     return false;
                 }
-                Encoding = CscArgs.Encoding ?? Encoding.UTF8;
+                Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom
 
                 var references = SetupReferences();
                 var sources = LoadSources(CscArgs.SourceFiles);
