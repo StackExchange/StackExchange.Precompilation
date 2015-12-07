@@ -181,8 +181,7 @@ namespace StackExchange.Precompilation
                     xmlDocumentationStream: xmlDocumentationStream,
                     win32Resources: win32Resources,
                     manifestResources: CscArgs.ManifestResources,
-                    options: CscArgs.EmitOptions,
-                    debugEntryPoint: null);
+                    options: CscArgs.EmitOptions);
 
                 Diagnostics.AddRange(emitResult.Diagnostics);
                 context.After(new AfterCompileContext
@@ -238,7 +237,6 @@ namespace StackExchange.Precompilation
         {
             var trees = new SyntaxTree[paths.Count];
             var parseOptions = CscArgs.ParseOptions;
-            var scriptParseOptions = CscArgs.ParseOptions.WithKind(SourceCodeKind.Script);
 
             Parallel.ForEach(paths,
                 (path, state, index) =>
@@ -251,7 +249,7 @@ namespace StackExchange.Precompilation
                         // bufferSize: 1 -> https://github.com/dotnet/roslyn/blob/ec1ea081ff5d84e91cbcb3b2f824655609cc5fc6/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L143
                         using (var sourceStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1))
                         {
-                            trees[index] = parser.Value.GetSyntaxTree(file, sourceStream, path.IsScript ? scriptParseOptions : parseOptions);
+                            trees[index] = parser.Value.GetSyntaxTree(file, sourceStream, parseOptions);
                         }
                     }
                     else
