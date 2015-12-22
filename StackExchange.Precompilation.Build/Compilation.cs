@@ -45,7 +45,13 @@ namespace StackExchange.Precompilation
             };
 
             CurrentDirectory = new DirectoryInfo(_precompilationCommandLineArgs.BaseDirectory);
+
             AppDomain.CurrentDomain.SetData("DataDirectory", Path.Combine(CurrentDirectory.FullName, "App_Data")); // HACK mocking ASP.NET's ~/App_Data aka. |DataDirectory|
+
+            // HACK moar HttpRuntime stuff
+            AppDomain.CurrentDomain.SetData(".appDomain", AppDomain.CurrentDomain.FriendlyName);
+            AppDomain.CurrentDomain.SetData(".appPath", CurrentDirectory.FullName);
+            AppDomain.CurrentDomain.SetData(".appVPath", "/");
         }
 
         private Parser CSharp()
