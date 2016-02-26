@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Emit;
 
@@ -33,6 +34,12 @@ namespace StackExchange.Precompilation
             new DiagnosticDescriptor("SE003", "View generation failed", "View generation failed: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor FailedParsingSourceTree =
             new DiagnosticDescriptor("SE004", "Failed parsing source tree", "Failed parasing source tree: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        internal static DiagnosticDescriptor ERR_FileNotFound =
+            new DiagnosticDescriptor("CS2001", "FileNotFound", "Source file '{0}' could not be found", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        internal static DiagnosticDescriptor ERR_BinaryFile =
+            new DiagnosticDescriptor("CS2015", "BinaryFile", "'{0}' is a binary file instead of a text file", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        internal static DiagnosticDescriptor ERR_NoSourceFile =
+            new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}') ", DiagnosticCategory, DiagnosticSeverity.Error, true);
 
 
         public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
@@ -245,26 +252,53 @@ namespace StackExchange.Precompilation
             var trees = new SyntaxTree[paths.Count];
             var parseOptions = CscArgs.ParseOptions;
             var scriptParseOptions = CscArgs.ParseOptions.WithKind(SourceCodeKind.Script);
-
+            var diagnostics = new Diagnostic[paths.Count];
             Parallel.ForEach(paths,
                 (path, state, index) =>
                 {
                     var file = path.Path;
                     var ext = Path.GetExtension(file) ?? "";
                     Lazy<Parser> parser;
+
                     if(_syntaxTreeLoaders.TryGetValue(ext, out parser))
                     {
-                        // bufferSize: 1 -> https://github.com/dotnet/roslyn/blob/ec1ea081ff5d84e91cbcb3b2f824655609cc5fc6/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L143
-                        using (var sourceStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1))
+                        var fileOpen = false;
+                        try
                         {
-                            trees[index] = parser.Value.GetSyntaxTree(file, sourceStream, path.IsScript ? scriptParseOptions : parseOptions);
+                            // bufferSize: 1 -> https://github.com/dotnet/roslyn/blob/ec1ea081ff5d84e91cbcb3b2f824655609cc5fc6/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L143
+                            using (
+                                var sourceStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read,
+                                    bufferSize: 1))
+                            {
+                                fileOpen = true;
+                                trees[index] = parser.Value.GetSyntaxTree(file, sourceStream,
+                                    path.IsScript ? scriptParseOptions : parseOptions);
+                            }
+                        }
+
+                        // should be equivalent to CommonCompiler.ToFileReadDiagnostics
+                        // see https://github.com/dotnet/roslyn/blob/ddaf4146/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L165
+                        catch (Exception ex)
+                            when (!fileOpen && (ex is FileNotFoundException || ex is DirectoryNotFoundException))
+                        {
+                            diagnostics[index] = Diagnostic.Create(ERR_FileNotFound, Location.None, file);
+                        }
+                        catch (InvalidDataException)
+                        {
+                            diagnostics[index] = Diagnostic.Create(ERR_BinaryFile, AsLocation(file), file);
+                        }
+                        catch (Exception ex)
+                        {
+                            diagnostics[index] = Diagnostic.Create(ERR_NoSourceFile, AsLocation(file), file, ex.Message);
                         }
                     }
                     else
                     {
-                        Diagnostics.Add(Diagnostic.Create(UnknownFileType, AsLocation(file), ext));
+                        diagnostics[index] = Diagnostic.Create(UnknownFileType, AsLocation(file), ext);
                     }
                 });
+
+            Diagnostics.AddRange(diagnostics.Where(x => x != null));
 
             return trees.Where(x => x != null).Concat(GeneratedSyntaxTrees());
         }
