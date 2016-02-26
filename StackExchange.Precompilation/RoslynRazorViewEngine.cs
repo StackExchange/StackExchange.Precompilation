@@ -65,11 +65,16 @@ namespace StackExchange.Precompilation
 
         /// <inheritdoc />
         protected override IView CreatePartialView(ControllerContext controllerContext, string partialPath) =>
-            new RoslynRazorView(this, controllerContext, partialPath, GetTypeFromVirtualPath(partialPath), false);
+            new RoslynRazorView(this, controllerContext, partialPath, GetTypeFromVirtualPath(partialPath), false, null);
 
         /// <inheritdoc />
         protected override IView CreateView(ControllerContext controllerContext, string viewPath, string masterPath) =>
-            new RoslynRazorView(this, controllerContext, viewPath, GetTypeFromVirtualPath(viewPath), true);
+            new RoslynRazorView(this, controllerContext, viewPath, GetTypeFromVirtualPath(viewPath), true, masterPath);
+
+        // using reflection to get a mis-spelled internal property setter... what could possibly go wrong?
+        private static readonly MethodInfo WebViewPage_OverridenLayoutPathSetter = typeof (WebViewPage)
+            .GetProperty("OverridenLayoutPath", BindingFlags.Instance | BindingFlags.NonPublic)
+            .SetMethod;
 
         private class RoslynRazorView : IView, IVirtualPathFactory
         {
@@ -78,16 +83,17 @@ namespace StackExchange.Precompilation
             private readonly RoslynRazorViewEngine _viewEngine;
             private readonly bool _runViewStartPages;
             private readonly ControllerContext _controllerContext;
+            private readonly string _overridenLayoutPath;
 
-            public RoslynRazorView(RoslynRazorViewEngine viewEngine, ControllerContext controllerContext, string virtualPath, Type type, bool runViewStartPages)
+            public RoslynRazorView(RoslynRazorViewEngine viewEngine, ControllerContext controllerContext, string virtualPath, Type type, bool runViewStartPages, string overridenLayoutPath)
             {
                 _type = type;
                 _virtualPath = virtualPath;
                 _viewEngine = viewEngine;
                 _runViewStartPages = runViewStartPages;
                 _controllerContext = controllerContext;
+                _overridenLayoutPath = overridenLayoutPath;
             }
-
             public void Render(ViewContext viewContext, TextWriter writer)
             {
                 var basePage = (WebPageBase)Activator.CreateInstance(_type);
@@ -105,12 +111,15 @@ namespace StackExchange.Precompilation
                 var webViewPage = basePage as WebViewPage;
                 if (webViewPage != null)
                 {
+                    if (!string.IsNullOrEmpty(_overridenLayoutPath))
+                    {
+                        WebViewPage_OverridenLayoutPathSetter.Invoke(webViewPage, new object[] {_overridenLayoutPath});
+                    }
                     webViewPage.ViewContext = viewContext;
                     webViewPage.ViewData = viewContext.ViewData;
                     webViewPage.InitHelpers();
                 }
-
-                var pageContext = new WebPageContext(viewContext.HttpContext, basePage, null);
+                var pageContext = new WebPageContext(viewContext.HttpContext, basePage, viewContext.ViewData?.Model);
                 basePage.ExecutePageHierarchy(pageContext, writer, startPage);
             }
 

@@ -20,5 +20,15 @@ namespace Test.WebApp.Controllers
 
             return View(new Models.SampleModel { ViewPaths = viewPaths });
         }
+
+        public ActionResult IndexOverridden()
+        {
+            return new ViewResult
+            {
+                ViewName = "~/Views/Home/Index.cshtml",
+                MasterName = "~/Views/Shared/_Layout.Overridden.cshtml",
+                ViewData = new ViewDataDictionary(new Models.SampleModel { ViewPaths = new [] { "OVERRIDDDDDEN" } }),
+            };
+        }
     }
 }
