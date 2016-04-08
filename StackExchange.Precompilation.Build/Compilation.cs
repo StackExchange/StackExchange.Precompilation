@@ -182,9 +182,9 @@ namespace StackExchange.Precompilation
                 pdbPath = Path.ChangeExtension(outputPath, ".pdb");
             }
 
-            using (var peStream = File.Create(outputPath))
-            using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? File.Create(pdbPath) : null)
-            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? File.Create(CscArgs.DocumentationPath) : null)
+            using (var peStream = new MemoryStream())
+            using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? new MemoryStream() : null)
+            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream(): null)
             using (var win32Resources = CreateWin32Resource(compilation))
             {
                 // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
@@ -208,7 +208,29 @@ namespace StackExchange.Precompilation
                     XmlDocStream = xmlDocumentationStream,
                 });
 
+                // do not create the output files if emit fails
+                // if the output files are there, msbuild incremental build thinks the previous build succeeded
+                if (emitResult.Success)
+                {
+                    Task.WaitAll(
+                        DumpToFileAsync(outputPath, peStream),
+                        DumpToFileAsync(pdbPath, pdbStream),
+                        DumpToFileAsync(CscArgs.DocumentationPath, xmlDocumentationStream));
+                }
+
                 return emitResult;
+            }
+        }
+
+        private static async Task DumpToFileAsync(string path, MemoryStream stream)
+        {
+            if (stream?.Length > 0)
+            {
+                stream.Position = 0;
+                using (var file = File.Create(path))
+                {
+                    await stream.CopyToAsync(file);
+                }
             }
         }
 
