@@ -16,12 +16,9 @@
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
       <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.2.1" />
     </dependencies>
-    <releaseNotes>Version 3.1.1
-* updated roslyn packages to 1.1.1
-* added missing support for ViewResults with master view overrides (e.g. Controller.View(string,string,object)) to RoslynRazorViewEngine
-* mocked AppDomain variables to enable some HttpContext functionality inside precompilation modules
-* fixed issues:
-#1  generating CS1504, CS2001, CS2015 for missing/invalid/unaccessible source files
+    <releaseNotes>Version 3.2.0
+* updated roslyn packages to 1.2.1
+* failed builds don't leave a 0-byte files laying around, fixes incremental msbuild
     </releaseNotes>
   </metadata>
   <files>
