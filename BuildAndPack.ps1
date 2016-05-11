@@ -10,5 +10,5 @@ $version = "$semver-alpha$epoch"
 new-item .\packages\obj -type directory -force | out-null
 get-childitem *.nuspec -Recurse | 
     where { $_.FullName -notmatch '\\packages\\' } | 
-    foreach { nuget pack $_.FullName -version $version -o packages\obj } | 
+    foreach { .nuget\nuget pack $_.FullName -version $version -o packages\obj } | 
     out-null
