@@ -1,4 +1,6 @@
-﻿using System;
+﻿extern alias aliastest;
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +13,7 @@ namespace Test.ConsoleApp
     {
         static void Main(string[] args)
         {
+            Console.WriteLine(nameof(aliastest::System.Xml.Linq.Extensions));
             Console.ReadLine().Dump();
         }
     }

@@ -266,7 +266,7 @@ namespace StackExchange.Precompilation
         {
             // really don't care about /addmodule and .netmodule stuff...
             // https://msdn.microsoft.com/en-us/library/226t7yxe.aspx
-            return _precompilationCommandLineArgs.References.Select(x => (MetadataReference)MetadataReference.CreateFromFile(x, MetadataReferenceProperties.Assembly)).ToArray();
+            return CscArgs.MetadataReferences.Select(x => (MetadataReference)MetadataReference.CreateFromFile(x.Reference, x.Properties)).ToArray();
         }
 
         private IEnumerable<SyntaxTree> LoadSources(ICollection<CommandLineSourceFile> paths)

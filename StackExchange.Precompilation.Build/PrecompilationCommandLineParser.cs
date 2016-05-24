@@ -71,6 +71,8 @@ namespace StackExchange.Precompilation
             }
         }
 
+        private static readonly Regex Reference = new Regex(@"/r(eference)?:(?<alias>[\w_]+=)?", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         public static PrecompilationCommandLineArgs Parse(string[] arguments, string baseDirectory)
         {
             var result = new PrecompilationCommandLineArgs { Arguments = arguments, BaseDirectory = baseDirectory };
@@ -81,14 +83,17 @@ namespace StackExchange.Precompilation
             for(var i = 0; i < arguments.Length; i++)
             {
                 var arg = arguments[i];
+                var reference = Reference.Match(arg);
                 if(arg.StartsWith("@"))
                 {
                     if (!loadedRsp.Add(arg = ParseFileFromArg(arg, '@'))) continue;
                     arguments = arguments.Concat(File.ReadAllLines(arg).SelectMany(SplitCommandLine)).ToArray();
                 }
-                else if(arg.StartsWith("/r:") || arg.StartsWith("/reference:"))
+                else if(reference.Success)
                 {
-                    references.Add(ParseFileFromReference(arg));
+                    // don't care about reference aliases in the compilation appdomain
+                    // https://msdn.microsoft.com/en-us/library/ms173212.aspx
+                    references.Add(ParseFileFromArg(arg, reference.Groups["alias"].Success ? '=' : ':'));
                 }
                 else if(arg.StartsWith("/appconfig:"))
                 {
@@ -102,16 +107,6 @@ namespace StackExchange.Precompilation
         private static string ParseFileFromArg(string arg, char delimiter = ':')
         {
             return Path.GetFullPath(arg.Substring(arg.IndexOf(delimiter) + 1));
-        }
-
-        private static string ParseFileFromReference(string arg)
-        {
-            var rxReference = new Regex("/(r|(reference)):([a-zA-Z0-9]*=)?(?<ref>.*)");
-            var match = rxReference.Match(arg);
-            if (!match.Success)
-                throw new Exception($"Could not find a reference in {arg}");
-            var reference = match.Groups["ref"].Value;
-            return Path.GetFullPath(reference);
         }
     }
 }
