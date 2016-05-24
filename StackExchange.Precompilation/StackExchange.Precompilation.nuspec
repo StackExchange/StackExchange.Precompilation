@@ -14,11 +14,11 @@
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.2.1" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="1.2.2" />
     </dependencies>
-    <releaseNotes>Version 3.2.0
-* updated roslyn packages to 1.2.1
-* failed builds don't leave a 0-byte files laying around, fixes incremental msbuild
+    <releaseNotes>Version 3.2.1
+* updated roslyn packages to 1.2.2
+* passthrough of /reference:alias= parameters
     </releaseNotes>
   </metadata>
   <files>
