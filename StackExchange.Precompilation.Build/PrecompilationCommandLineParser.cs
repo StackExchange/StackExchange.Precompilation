@@ -88,9 +88,7 @@ namespace StackExchange.Precompilation
                 }
                 else if(arg.StartsWith("/r:") || arg.StartsWith("/reference:"))
                 {
-                    // don't care about extern stuff for now..
-                    // https://msdn.microsoft.com/en-us/library/ms173212.aspx
-                    references.Add(ParseFileFromArg(arg));
+                    references.Add(ParseFileFromReference(arg));
                 }
                 else if(arg.StartsWith("/appconfig:"))
                 {
@@ -104,6 +102,16 @@ namespace StackExchange.Precompilation
         private static string ParseFileFromArg(string arg, char delimiter = ':')
         {
             return Path.GetFullPath(arg.Substring(arg.IndexOf(delimiter) + 1));
+        }
+
+        private static string ParseFileFromReference(string arg)
+        {
+            var rxReference = new Regex("/(r|(reference)):([a-zA-Z0-9]*=)?(?<ref>.*)");
+            var match = rxReference.Match(arg);
+            if (!match.Success)
+                throw new Exception($"Could not find a reference in {arg}");
+            var reference = match.Groups["ref"].Value;
+            return Path.GetFullPath(reference);
         }
     }
 }

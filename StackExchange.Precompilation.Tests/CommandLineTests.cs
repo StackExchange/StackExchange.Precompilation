@@ -38,8 +38,11 @@ namespace StackExchange.Precompilation.Tests
         [Test]
         [TestCase("a b c", new string[0], (string)null)]
         [TestCase("a b /r:c.dll", new[] { "c.dll" }, (string)null)]
+        [TestCase("a b /r:a=c.dll", new[] { "c.dll" }, (string)null)]
+        [TestCase("a b /reference:a=c.dll", new[] { "c.dll" }, (string)null)]
         [TestCase("a b /r:c.dll /r:d.dll", new[] { "c.dll", "d.dll" }, (string)null)]
         [TestCase("a b /r:c.dll /appconfig:moar.config /r:d.dll", new[] { "c.dll", "d.dll" }, "moar.config")]
+        [TestCase("a b /r:alias=c.dll /appconfig:moar.config /reference:d.dll", new[] { "c.dll", "d.dll" }, "moar.config")]
         public void ParseArgumentCases(string cmdline, string[] references, string appconfig)
         {
             var dir = Guid.NewGuid().ToString();
