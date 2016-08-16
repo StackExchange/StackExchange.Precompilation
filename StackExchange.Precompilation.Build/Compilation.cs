@@ -12,6 +12,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Emit;
+using System.Collections.Immutable;
 
 namespace StackExchange.Precompilation
 {
@@ -87,13 +88,20 @@ namespace StackExchange.Precompilation
                 }
                 Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom
 
+                var compilationOptions = CscArgs.CompilationOptions.WithAssemblyIdentityComparer(GetAssemblyIdentityComparer());
+                if (!string.IsNullOrEmpty(CscArgs.CompilationOptions.CryptoKeyFile))
+                {
+                    var cryptoKeyFilePath = Path.Combine(CscArgs.BaseDirectory, CscArgs.CompilationOptions.CryptoKeyFile);
+                    compilationOptions = compilationOptions.WithStrongNameProvider(new DesktopStrongNameProvider(ImmutableArray.Create(cryptoKeyFilePath)));
+                }
+
                 var references = SetupReferences();
                 var sources = LoadSources(CscArgs.SourceFiles);
 
                 var compilationModules = LoadModules().ToList();
 
                 var compilation = CSharpCompilation.Create(
-                    options: CscArgs.CompilationOptions.WithAssemblyIdentityComparer(GetAssemblyIdentityComparer()),
+                    options: compilationOptions,
                     references: references,
                     syntaxTrees: sources,
                     assemblyName: CscArgs.CompilationName);
