@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
 
-
 namespace StackExchange.Precompilation
 {
     class CSharpParser : Parser
@@ -16,13 +15,13 @@ namespace StackExchange.Precompilation
         }
 
         // https://github.com/dotnet/roslyn/blob/master/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L149
-        private delegate SourceText _CreateSourceText(Stream stream, Encoding encoding, SourceHashAlgorithm hash);
+        private delegate SourceText _CreateSourceText(Stream stream, Encoding encoding, SourceHashAlgorithm hash, bool canBeEmbedded);
         private static Type EncodedStringText = Type.GetType("Microsoft.CodeAnalysis.Text.EncodedStringText, Microsoft.CodeAnalysis");
         private static MethodInfo EncodedStringTextCreateMethod = EncodedStringText.GetMethod(
             "Create",
             BindingFlags.NonPublic | BindingFlags.Static,
             Type.DefaultBinder,
-            new[] {typeof (Stream), typeof(Encoding), typeof(SourceHashAlgorithm)},
+            new[] {typeof (Stream), typeof(Encoding), typeof(SourceHashAlgorithm), typeof(bool)},
             null);
         private static _CreateSourceText CreateSourceText = (_CreateSourceText) Delegate.CreateDelegate(typeof (_CreateSourceText), null, EncodedStringTextCreateMethod);
 
@@ -38,7 +37,7 @@ namespace StackExchange.Precompilation
         {
             try
             {
-                var sourceText = CreateSourceText(sourceStream, Compilation.Encoding,  Compilation.CscArgs.ChecksumAlgorithm);
+                var sourceText = CreateSourceText(sourceStream, Compilation.Encoding,  Compilation.CscArgs.ChecksumAlgorithm, false);
                 var tree = SyntaxFactory.ParseSyntaxTree(sourceText, parseOptions, sourcePath);
 
                 // prepopulate line tables

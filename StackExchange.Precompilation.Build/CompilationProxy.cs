@@ -90,15 +90,21 @@ namespace StackExchange.Precompilation
                     return null;
                 }
             }).Where(x => x != null).ToArray();
-            var fullLookup = referenceAssemblies.ToDictionary(x => x.FullName);
-            var shortLookup = referenceAssemblies.ToDictionary(x => x.GetName().Name);
+
+            var fullLookup = referenceAssemblies.ToDictionary(x => x.FullName, x => new List<string> { x.Location });
+            var shortLookup = referenceAssemblies.ToLookup(x => x.GetName().Name).ToDictionary(x => x.Key, x => x.Select(d => d.Location).ToList());
+
+
             AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
             {
-                Assembly a;
-                if (fullLookup.TryGetValue(e.Name, out a) || shortLookup.TryGetValue(e.Name, out a))
+                List<string> a;
+                if ((fullLookup.TryGetValue(e.Name, out a) || shortLookup.TryGetValue(e.Name, out a)) && a.Any())
                 {
-                    return Assembly.LoadFile(a.Location);
+                    var assembly = Assembly.LoadFile(a[0]);
+                    a.RemoveAt(0);
+                    return assembly;
                 }
+
                 return null;
             };
         }
