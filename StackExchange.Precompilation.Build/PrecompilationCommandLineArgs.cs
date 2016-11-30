@@ -3,7 +3,7 @@ using System;
 namespace StackExchange.Precompilation
 {
     [Serializable]
-    public class PrecompilationCommandLineArgs
+    public class PrecompilationCommandLineArgs : MarshalByRefObject
     {
         /// <summary>
         /// Unprocessed arguments.

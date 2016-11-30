@@ -17,6 +17,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Host;
 using System.Composition.Hosting;
 using Microsoft.CodeAnalysis.Host.Mef;
+using System.Composition;
 
 namespace StackExchange.Precompilation
 {
@@ -64,13 +65,19 @@ namespace StackExchange.Precompilation
         {
             try
             {
+
                 // this parameter was introduced in rc3, all call to it seem to be using RuntimeEnvironment.GetRuntimeDirectory()
                 // https://github.com/dotnet/roslyn/blob/0382e3e3fc543fc483090bff3ab1eaae39dfb4d9/src/Compilers/CSharp/csc/Program.cs#L18
                 var sdkDirectory = RuntimeEnvironment.GetRuntimeDirectory();
 
                 CscArgs = CSharpCommandLineParser.Default.Parse(_precompilationCommandLineArgs.Arguments, _precompilationCommandLineArgs.BaseDirectory, sdkDirectory);
 
+
                 Diagnostics = new List<Diagnostic>(CscArgs.Errors);
+
+                // load those before anything else hooks into our AssemlbyResolve...
+                var compilationModules = LoadModules().ToList();
+
                 if (Diagnostics.Any())
                 {
                     return false;
@@ -91,7 +98,6 @@ namespace StackExchange.Precompilation
                     }
                 }
 
-                var compilationModules = LoadModules().ToList();
                 var context = new CompileContext(compilationModules);
 
                 context.Before(new BeforeCompileContext
@@ -114,6 +120,29 @@ namespace StackExchange.Precompilation
             {
                 Diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
             }
+        }
+
+        private const string WorkspaceKind = nameof(StackExchange) + "." + nameof(StackExchange.Precompilation);
+
+        // all of this is because DesktopAnalyzerAssemblyLoader needs full paths
+        [ExportWorkspaceService(typeof(IAnalyzerService), WorkspaceKind), Shared]
+        private class CompilationAnalyzerService : IAnalyzerService, IWorkspaceService
+        {
+            private readonly IAnalyzerAssemblyLoader _loader = new CompilationAnalyzerAssemblyLoader();
+
+            public IAnalyzerAssemblyLoader GetLoader() => _loader; 
+        }
+
+        private class CompilationAnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
+        {
+            private static Type DesktopAssemblyLoader = Type.GetType("Microsoft.CodeAnalysis.DesktopAnalyzerAssemblyLoader, Microsoft.CodeAnalysis.Workspaces.Desktop");
+            private static IAnalyzerAssemblyLoader _desktopLoader = (IAnalyzerAssemblyLoader)Activator.CreateInstance(DesktopAssemblyLoader);
+
+            private string ResolvePath(string path) => Path.IsPathRooted(path) ? path : Path.GetFullPath(path);
+
+            public void AddDependencyLocation(string fullPath) => _desktopLoader.AddDependencyLocation(ResolvePath(fullPath));
+
+            public Assembly LoadFromPath(string fullPath) => _desktopLoader.LoadFromPath(ResolvePath(fullPath));
         }
 
         private static AdhocWorkspace CreateWokspace()
@@ -139,10 +168,14 @@ namespace StackExchange.Precompilation
                 }
             }
             parts.RemoveAll(x => x == null);
-
-            var container = new ContainerConfiguration().WithParts(parts).CreateContainer();
+            
+            var container = new ContainerConfiguration()
+                .WithParts(parts)
+                .WithPart<CompilationAnalyzerService>()
+                .WithPart<CompilationAnalyzerAssemblyLoader>()
+                .CreateContainer();
             var host = MefHostServices.Create(container);
-            var workspace = new AdhocWorkspace(host, workspaceKind: "StackExchange.Precompilation");
+            var workspace = new AdhocWorkspace(host, WorkspaceKind);
             return workspace;
         }
 
@@ -184,7 +217,7 @@ namespace StackExchange.Precompilation
                 ICompileModule compileModule = null;
                 try
                 {
-                    var type = Type.GetType(module.Type, false);
+                    var type = Type.GetType(module.Type, true);
                     compileModule = Activator.CreateInstance(type, true) as ICompileModule;
                 }
                 catch(Exception ex)

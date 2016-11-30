@@ -212,6 +212,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CancelationToken.cs" />
+    <Compile Include="CompilationAssemblyResolver.cs" />
     <Compile Include="CompilationProxy.cs" />
     <Compile Include="Compilation.cs" />
     <Compile Include="ICompilationProxy.cs" />
