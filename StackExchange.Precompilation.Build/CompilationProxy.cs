@@ -73,7 +73,7 @@ namespace StackExchange.Precompilation
         // making the methods below static would not be a good idea, they need to run in the compilation app domain
         private bool RunCs(PrecompilationCommandLineArgs precompilationArgs)
         {
-            return new Compilation(precompilationArgs).Run();
+            return new Compilation(precompilationArgs).RunAsync().Result;
         }
 
         private void HookAssemblyReslove(IEnumerable<string> references)
@@ -101,7 +101,6 @@ namespace StackExchange.Precompilation
                 if ((fullLookup.TryGetValue(e.Name, out a) || shortLookup.TryGetValue(e.Name, out a)) && a.Any())
                 {
                     var assembly = Assembly.LoadFile(a[0]);
-                    a.RemoveAt(0);
                     return assembly;
                 }
 
