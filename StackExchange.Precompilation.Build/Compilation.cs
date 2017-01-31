@@ -33,8 +33,6 @@ namespace StackExchange.Precompilation
         private const string DiagnosticCategory = "StackExchange.Precompilation";
         private static DiagnosticDescriptor FailedToCreateModule =
             new DiagnosticDescriptor("SE001", "Failed to instantiate ICompileModule", "Failed to instantiate ICompileModule '{0}': {1}", DiagnosticCategory, DiagnosticSeverity.Error, true);
-        private static DiagnosticDescriptor UnknownFileType =
-            new DiagnosticDescriptor("SE002", "Unknown file type", "Unknown file type '{0}'", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ViewGenerationFailed =
             new DiagnosticDescriptor("SE003", "View generation failed", "View generation failed: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor FailedParsingSourceTree =
