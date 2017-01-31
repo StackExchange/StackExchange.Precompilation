@@ -14,7 +14,7 @@
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="StackExchange.Precompilation" version="$version$" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp.Workspaces" version="2.0.0-rc2" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp.Workspaces" version="2.0.0-rc3" />
     </dependencies>
   </metadata>
   <files>
