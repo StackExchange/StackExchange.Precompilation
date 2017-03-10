@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace StackExchange.Precompilation
 {
@@ -24,7 +25,7 @@ namespace StackExchange.Precompilation
             try
             {
                 var currentSetup = AppDomain.CurrentDomain.SetupInformation;
-                var setup = new AppDomainSetup
+                var setup = new AppDomainSetup()
                 {
                     ApplicationName = currentSetup.ApplicationName,
                     ApplicationBase = currentSetup.ApplicationBase,
@@ -45,14 +46,16 @@ namespace StackExchange.Precompilation
                     AppDomain.CurrentDomain.Evidence,
                     setup);
 
-                var proxy = (CompilationProxy) compilationDomain.CreateInstanceAndUnwrap(
-                    typeof (CompilationProxy).Assembly.FullName,
-                    typeof (CompilationProxy).FullName);
+                var assemblyExt = new HashSet<string> { ".dll", ".exe" };
+                var references = precompilationArgs.References; //.Concat(Directory.EnumerateFiles(AppDomain.CurrentDomain.BaseDirectory).Where(r => assemblyExt.Contains(Path.GetExtension(r)))).ToArray()
+                CompilationAssemblyResolver.Register(compilationDomain, references);
+
+
+                var proxy = (CompilationProxy)compilationDomain.CreateInstanceAndUnwrap(
+                    typeof(CompilationProxy).Assembly.FullName,
+                    typeof(CompilationProxy).FullName);
 
                 proxy.SetConsoleIo(Console.In, Console.Out, Console.Error);
-
-                // we need to make sure referenced assemblies get loaded before we touch any roslyn or asp.net mvc types
-                proxy.HookAssemblyReslove(precompilationArgs.References);
 
                 return proxy.RunCs(precompilationArgs);
             }
@@ -63,7 +66,6 @@ namespace StackExchange.Precompilation
             }
         }
 
-
         public override object InitializeLifetimeService()
         {
             return null;
@@ -73,34 +75,7 @@ namespace StackExchange.Precompilation
         // making the methods below static would not be a good idea, they need to run in the compilation app domain
         private bool RunCs(PrecompilationCommandLineArgs precompilationArgs)
         {
-            return new Compilation(precompilationArgs).Run();
-        }
-
-        private void HookAssemblyReslove(IEnumerable<string> references)
-        {
-            var referenceAssemblies = references.Select(x =>
-            {
-                try
-                {
-                    return Assembly.ReflectionOnlyLoadFrom(x);
-                }
-                catch (Exception ex)
-                {
-                    Console.Error.WriteLine("WARNING: could not load reference '{0}' - {1} - {2}", x, ex.Message, ex.StackTrace);
-                    return null;
-                }
-            }).Where(x => x != null).ToArray();
-            var fullLookup = referenceAssemblies.ToDictionary(x => x.FullName);
-            var shortLookup = referenceAssemblies.ToDictionary(x => x.GetName().Name);
-            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
-            {
-                Assembly a;
-                if (fullLookup.TryGetValue(e.Name, out a) || shortLookup.TryGetValue(e.Name, out a))
-                {
-                    return Assembly.LoadFile(a.Location);
-                }
-                return null;
-            };
+            return new Compilation(precompilationArgs).RunAsync().Result;
         }
     }
 }

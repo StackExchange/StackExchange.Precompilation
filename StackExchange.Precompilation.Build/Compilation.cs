@@ -5,14 +5,17 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Emit;
 using System.Collections.Immutable;
+using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Host;
+using System.Composition.Hosting;
+using Microsoft.CodeAnalysis.Host.Mef;
+using System.Composition;
 
 namespace StackExchange.Precompilation
 {
@@ -24,13 +27,10 @@ namespace StackExchange.Precompilation
         internal DirectoryInfo CurrentDirectory { get; private set; }
         internal List<Diagnostic> Diagnostics { get; private set; }
         internal Encoding Encoding { get; private set; }
-        private readonly Dictionary<string, Lazy<Parser>> _syntaxTreeLoaders;
 
         private const string DiagnosticCategory = "StackExchange.Precompilation";
         private static DiagnosticDescriptor FailedToCreateModule =
             new DiagnosticDescriptor("SE001", "Failed to instantiate ICompileModule", "Failed to instantiate ICompileModule '{0}': {1}", DiagnosticCategory, DiagnosticSeverity.Error, true);
-        private static DiagnosticDescriptor UnknownFileType =
-            new DiagnosticDescriptor("SE002", "Unknown file type", "Unknown file type '{0}'", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ViewGenerationFailed =
             new DiagnosticDescriptor("SE003", "View generation failed", "View generation failed: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor FailedParsingSourceTree =
@@ -40,17 +40,12 @@ namespace StackExchange.Precompilation
         internal static DiagnosticDescriptor ERR_BinaryFile =
             new DiagnosticDescriptor("CS2015", "BinaryFile", "'{0}' is a binary file instead of a text file", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_NoSourceFile =
-            new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}') ", DiagnosticCategory, DiagnosticSeverity.Error, true);
+            new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}')", DiagnosticCategory, DiagnosticSeverity.Error, true);
 
 
         public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
         {
             _precompilationCommandLineArgs = precompilationCommandLineArgs;
-            _syntaxTreeLoaders = new Dictionary<string, Lazy<Parser>>
-            {
-                {".cs", new Lazy<Parser>(CSharp, LazyThreadSafetyMode.PublicationOnly)},
-                {".cshtml", new Lazy<Parser>(Razor, LazyThreadSafetyMode.PublicationOnly)},
-            };
 
             CurrentDirectory = new DirectoryInfo(_precompilationCommandLineArgs.BaseDirectory);
 
@@ -62,62 +57,62 @@ namespace StackExchange.Precompilation
             AppDomain.CurrentDomain.SetData(".appVPath", "/");
         }
 
-        private Parser CSharp()
-        {
-            return new CSharpParser(this);
-        }
-
-        private Parser Razor()
-        {
-            return new RazorParser(this);
-        }
-
-        public bool Run()
+        public async Task<bool> RunAsync()
         {
             try
             {
+
                 // this parameter was introduced in rc3, all call to it seem to be using RuntimeEnvironment.GetRuntimeDirectory()
                 // https://github.com/dotnet/roslyn/blob/0382e3e3fc543fc483090bff3ab1eaae39dfb4d9/src/Compilers/CSharp/csc/Program.cs#L18
                 var sdkDirectory = RuntimeEnvironment.GetRuntimeDirectory();
+
                 CscArgs = CSharpCommandLineParser.Default.Parse(_precompilationCommandLineArgs.Arguments, _precompilationCommandLineArgs.BaseDirectory, sdkDirectory);
-                
+
+
                 Diagnostics = new List<Diagnostic>(CscArgs.Errors);
+
+                // load those before anything else hooks into our AssemlbyResolve...
+                var compilationModules = LoadModules().ToList();
+
                 if (Diagnostics.Any())
                 {
                     return false;
                 }
-                Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom
+                Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
 
-                var compilationOptions = CscArgs.CompilationOptions.WithAssemblyIdentityComparer(GetAssemblyIdentityComparer());
-                if (!string.IsNullOrEmpty(CscArgs.CompilationOptions.CryptoKeyFile))
+                using (var workspace = CreateWokspace())
                 {
-                    var cryptoKeyFilePath = Path.Combine(CscArgs.BaseDirectory, CscArgs.CompilationOptions.CryptoKeyFile);
-                    compilationOptions = compilationOptions.WithStrongNameProvider(new DesktopStrongNameProvider(ImmutableArray.Create(cryptoKeyFilePath)));
+                    var project = await CreateProjectAsync(workspace);
+                    var compilation = await project.GetCompilationAsync() as CSharpCompilation;
+
+                    var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
+                    if (analyzers.Any())
+                    {
+                        var analysis = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions);
+                        if (analysis.Analyzers.Any())
+                        {
+                            Diagnostics.AddRange(await analysis.GetAnalyzerDiagnosticsAsync());
+                        }
+                    }
+
+                    var context = new CompileContext(compilationModules);
+
+                    context.Before(new BeforeCompileContext
+                    {
+                        Arguments = CscArgs,
+                        Compilation = compilation,
+                        Diagnostics = Diagnostics,
+                        Resources = CscArgs.ManifestResources,
+                    });
+
+                    var emitResult = Emit(context);
+                    return emitResult.Success;
                 }
-
-                var references = SetupReferences();
-                var sources = LoadSources(CscArgs.SourceFiles);
-
-                var compilationModules = LoadModules().ToList();
-
-                var compilation = CSharpCompilation.Create(
-                    options: compilationOptions,
-                    references: references,
-                    syntaxTrees: sources,
-                    assemblyName: CscArgs.CompilationName);
-
-                var context = new CompileContext(compilationModules);
-
-                context.Before(new BeforeCompileContext
-                {
-                    Arguments = CscArgs,
-                    Compilation = compilation,
-                    Diagnostics = Diagnostics,
-                    Resources = CscArgs.ManifestResources.ToList()
-                });
-
-                var emitResult = Emit(context);
-                return emitResult.Success;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(string.Join("\n", ex.ToString().Split('\n').Select((x, i) => x + $"ERROR: {i:D4} {x}")));
+                return false;
             }
             finally
             {
@@ -125,16 +120,91 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private DesktopAssemblyIdentityComparer GetAssemblyIdentityComparer()
-        {
-            // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/CSharp/Portable/CommandLine/CSharpCompiler.cs#L105
-            if (CscArgs.AppConfigPath == null)
-                return DesktopAssemblyIdentityComparer.Default;
+        private const string WorkspaceKind = nameof(StackExchange) + "." + nameof(StackExchange.Precompilation);
 
-            using (var appConfigStream = File.OpenRead(CscArgs.AppConfigPath))
+        // all of this is because DesktopAnalyzerAssemblyLoader needs full paths
+        [ExportWorkspaceService(typeof(IAnalyzerService), WorkspaceKind), Shared]
+        private class CompilationAnalyzerService : IAnalyzerService, IWorkspaceService
+        {
+            private readonly IAnalyzerAssemblyLoader _loader = new CompilationAnalyzerAssemblyLoader();
+
+            public IAnalyzerAssemblyLoader GetLoader() => _loader; 
+        }
+
+        private class CompilationAnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
+        {
+            private static Type DesktopAssemblyLoader = Type.GetType("Microsoft.CodeAnalysis.DesktopAnalyzerAssemblyLoader, Microsoft.CodeAnalysis.Workspaces.Desktop");
+            private static IAnalyzerAssemblyLoader _desktopLoader = (IAnalyzerAssemblyLoader)Activator.CreateInstance(DesktopAssemblyLoader);
+
+            private string ResolvePath(string path) => Path.IsPathRooted(path) ? path : Path.GetFullPath(path);
+
+            public void AddDependencyLocation(string fullPath) => _desktopLoader.AddDependencyLocation(ResolvePath(fullPath));
+
+            public Assembly LoadFromPath(string fullPath) => _desktopLoader.LoadFromPath(ResolvePath(fullPath));
+        }
+
+        private static AdhocWorkspace CreateWokspace()
+        {
+            var assemblies = new[]
             {
-                return DesktopAssemblyIdentityComparer.LoadFromXml(appConfigStream);
+                "Microsoft.CodeAnalysis.Workspaces",
+                "Microsoft.CodeAnalysis.CSharp.Workspaces",
+                "Microsoft.CodeAnalysis.Workspaces.Desktop",
+            };
+
+            var parts = new List<Type>();
+            foreach (var a in assemblies)
+            {
+                // https://msdn.microsoft.com/en-us/library/system.reflection.assembly.gettypes(v=vs.110).aspx#Anchor_2
+                try
+                {
+                    parts.AddRange(Assembly.Load(a).GetTypes());
+                }
+                catch (ReflectionTypeLoadException thatsWhyWeCantHaveNiceThings)
+                {
+                    parts.AddRange(thatsWhyWeCantHaveNiceThings.Types);
+                }
             }
+            parts.RemoveAll(x => x == null);
+
+            var container = new ContainerConfiguration()
+                .WithParts(parts)
+                .WithPart<CompilationAnalyzerService>()
+                .WithPart<CompilationAnalyzerAssemblyLoader>()
+                .CreateContainer();
+
+            var host = MefHostServices.Create(container);
+            // belive me, I did try DesktopMefHostServices.DefaultServices
+            var workspace = new AdhocWorkspace(host, WorkspaceKind);
+            return workspace;
+        }
+
+        private async Task<Project> CreateProjectAsync(AdhocWorkspace workspace)
+        {
+            var projectInfo = CommandLineProject.CreateProjectInfo(CscArgs.OutputFileName, "C#", Environment.CommandLine, _precompilationCommandLineArgs.BaseDirectory, workspace);
+            var loaders = new List<RazorParser>();
+            TextLoader addCshtmlLoader(TextLoader l)
+            {
+                var c = new RazorParser(this, l, workspace);
+                loaders.Add(c);
+                return c;
+            };
+
+            projectInfo = projectInfo
+                .WithDocuments(
+                    projectInfo
+                        .Documents
+                        .Select(d => Path.GetExtension(d.FilePath) == ".cshtml"
+                            ? d.WithTextLoader(addCshtmlLoader(d.TextLoader))
+                            : d));
+
+            foreach (var l in loaders)
+            {
+                l.Start();
+            }
+            await Task.WhenAll(loaders.Select(x => x.Result));
+
+            return workspace.AddProject(projectInfo);
         }
 
         private IEnumerable<ICompileModule> LoadModules()
@@ -147,7 +217,7 @@ namespace StackExchange.Precompilation
                 ICompileModule compileModule = null;
                 try
                 {
-                    var type = Type.GetType(module.Type, false);
+                    var type = Type.GetType(module.Type, true);
                     compileModule = Activator.CreateInstance(type, true) as ICompileModule;
                 }
                 catch(Exception ex)
@@ -165,13 +235,36 @@ namespace StackExchange.Precompilation
             }
         }
 
+        private bool TryOpenFile(string path, out Stream stream)
+        {
+            stream = null;
+            if (string.IsNullOrEmpty(path))
+            {
+                return false;
+            }
+            if (!File.Exists(path))
+            {
+                Diagnostics.Add(Diagnostic.Create(ERR_FileNotFound, null, path));
+                return false;
+            }
+            try
+            {
+                stream = File.OpenRead(path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Add(Diagnostic.Create(ERR_NoSourceFile, null, path, ex.Message));
+                return false;
+            }
+        }
+
         private Stream CreateWin32Resource(CSharpCompilation compilation)
         {
-            if (CscArgs.Win32ResourceFile != null)
-                return File.OpenRead(CscArgs.Win32ResourceFile);
+            if (TryOpenFile(CscArgs.Win32ResourceFile, out var stream)) return stream;
 
-            using (var manifestStream = compilation.Options.OutputKind != OutputKind.NetModule ? CscArgs.Win32Manifest != null ? File.OpenRead(CscArgs.Win32Manifest) : null : null)
-            using (var iconStream = CscArgs.Win32Icon != null ? File.OpenRead(CscArgs.Win32Icon) : null)
+            using (var manifestStream = compilation.Options.OutputKind != OutputKind.NetModule && TryOpenFile(CscArgs.Win32Manifest, out var manifest) ? manifest : null)
+            using (var iconStream = TryOpenFile(CscArgs.Win32Icon, out var icon) ? icon : null)
                 return compilation.CreateDefaultWin32Resources(true, CscArgs.NoWin32Manifest, manifestStream, iconStream);
         }
 
@@ -192,7 +285,7 @@ namespace StackExchange.Precompilation
 
             using (var peStream = new MemoryStream())
             using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? new MemoryStream() : null)
-            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream(): null)
+            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
             using (var win32Resources = CreateWin32Resource(compilation))
             {
                 // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
@@ -203,6 +296,10 @@ namespace StackExchange.Precompilation
                     win32Resources: win32Resources,
                     manifestResources: CscArgs.ManifestResources,
                     options: CscArgs.EmitOptions,
+                    sourceLinkStream: TryOpenFile(CscArgs.SourceLink, out var sourceLinkStream) ? sourceLinkStream : null,
+                    embeddedTexts: CscArgs.EmbeddedFiles.AsEnumerable()
+                        .Select(x => TryOpenFile(x.Path, out var embeddedText) ? EmbeddedText.FromStream(x.Path, embeddedText) : null)
+                        .Where(x => x != null),
                     debugEntryPoint: null);
 
                 Diagnostics.AddRange(emitResult.Diagnostics);
@@ -270,67 +367,16 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private ICollection<MetadataReference> SetupReferences()
+        private sealed class NaiveReferenceResolver : MetadataReferenceResolver
         {
-            // really don't care about /addmodule and .netmodule stuff...
-            // https://msdn.microsoft.com/en-us/library/226t7yxe.aspx
-            return CscArgs.MetadataReferences.Select(x => (MetadataReference)MetadataReference.CreateFromFile(x.Reference, x.Properties)).ToArray();
-        }
+            private NaiveReferenceResolver() { }
+            public static NaiveReferenceResolver Instance { get; } = new NaiveReferenceResolver();
+            public override bool Equals(object other) => other is NaiveReferenceResolver;
 
-        private IEnumerable<SyntaxTree> LoadSources(ICollection<CommandLineSourceFile> paths)
-        {
-            var trees = new SyntaxTree[paths.Count];
-            var parseOptions = CscArgs.ParseOptions;
-            var scriptParseOptions = CscArgs.ParseOptions.WithKind(SourceCodeKind.Script);
-            var diagnostics = new Diagnostic[paths.Count];
-            Parallel.ForEach(paths,
-                (path, state, index) =>
-                {
-                    var file = path.Path;
-                    var ext = Path.GetExtension(file) ?? "";
-                    Lazy<Parser> parser;
+            public override int GetHashCode() => 42;
 
-                    if(_syntaxTreeLoaders.TryGetValue(ext, out parser))
-                    {
-                        var fileOpen = false;
-                        try
-                        {
-                            // bufferSize: 1 -> https://github.com/dotnet/roslyn/blob/ec1ea081ff5d84e91cbcb3b2f824655609cc5fc6/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L143
-                            using (
-                                var sourceStream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read,
-                                    bufferSize: 1))
-                            {
-                                fileOpen = true;
-                                trees[index] = parser.Value.GetSyntaxTree(file, sourceStream,
-                                    path.IsScript ? scriptParseOptions : parseOptions);
-                            }
-                        }
-
-                        // should be equivalent to CommonCompiler.ToFileReadDiagnostics
-                        // see https://github.com/dotnet/roslyn/blob/ddaf4146/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L165
-                        catch (Exception ex)
-                            when (!fileOpen && (ex is FileNotFoundException || ex is DirectoryNotFoundException))
-                        {
-                            diagnostics[index] = Diagnostic.Create(ERR_FileNotFound, Location.None, file);
-                        }
-                        catch (InvalidDataException)
-                        {
-                            diagnostics[index] = Diagnostic.Create(ERR_BinaryFile, AsLocation(file), file);
-                        }
-                        catch (Exception ex)
-                        {
-                            diagnostics[index] = Diagnostic.Create(ERR_NoSourceFile, AsLocation(file), file, ex.Message);
-                        }
-                    }
-                    else
-                    {
-                        diagnostics[index] = Diagnostic.Create(UnknownFileType, AsLocation(file), ext);
-                    }
-                });
-
-            Diagnostics.AddRange(diagnostics.Where(x => x != null));
-
-            return trees.Where(x => x != null).Concat(GeneratedSyntaxTrees());
+            public override ImmutableArray<PortableExecutableReference> ResolveReference(string reference, string baseFilePath, MetadataReferenceProperties properties)
+                => ImmutableArray.Create(MetadataReference.CreateFromFile(reference, properties));
         }
 
         private IEnumerable<SyntaxTree> GeneratedSyntaxTrees()
