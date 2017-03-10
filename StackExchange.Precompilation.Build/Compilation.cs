@@ -5,11 +5,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Emit;
 using System.Collections.Immutable;
@@ -42,7 +40,7 @@ namespace StackExchange.Precompilation
         internal static DiagnosticDescriptor ERR_BinaryFile =
             new DiagnosticDescriptor("CS2015", "BinaryFile", "'{0}' is a binary file instead of a text file", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_NoSourceFile =
-            new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}') ", DiagnosticCategory, DiagnosticSeverity.Error, true);
+            new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}')", DiagnosticCategory, DiagnosticSeverity.Error, true);
 
 
         public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
@@ -82,32 +80,34 @@ namespace StackExchange.Precompilation
                 }
                 Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
 
-                var workspace = CreateWokspace();
-                var project = await CreateProjectAsync(workspace);
-                var compilation = await project.GetCompilationAsync() as CSharpCompilation;
-
-                var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
-                if (analyzers.Any())
+                using (var workspace = CreateWokspace())
                 {
-                    var analysis = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions);
-                    if (analysis.Analyzers.Any())
+                    var project = await CreateProjectAsync(workspace);
+                    var compilation = await project.GetCompilationAsync() as CSharpCompilation;
+
+                    var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
+                    if (analyzers.Any())
                     {
-                        Diagnostics.AddRange(await analysis.GetAnalyzerDiagnosticsAsync());
+                        var analysis = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions);
+                        if (analysis.Analyzers.Any())
+                        {
+                            Diagnostics.AddRange(await analysis.GetAnalyzerDiagnosticsAsync());
+                        }
                     }
+
+                    var context = new CompileContext(compilationModules);
+
+                    context.Before(new BeforeCompileContext
+                    {
+                        Arguments = CscArgs,
+                        Compilation = compilation,
+                        Diagnostics = Diagnostics,
+                        Resources = CscArgs.ManifestResources,
+                    });
+
+                    var emitResult = Emit(context);
+                    return emitResult.Success;
                 }
-
-                var context = new CompileContext(compilationModules);
-
-                context.Before(new BeforeCompileContext
-                {
-                    Arguments = CscArgs,
-                    Compilation = compilation,
-                    Diagnostics = Diagnostics,
-                    Resources = CscArgs.ManifestResources,
-                });
-
-                var emitResult = Emit(context);
-                return emitResult.Success;
             }
             catch (Exception ex)
             {
@@ -166,13 +166,15 @@ namespace StackExchange.Precompilation
                 }
             }
             parts.RemoveAll(x => x == null);
-            
+
             var container = new ContainerConfiguration()
                 .WithParts(parts)
                 .WithPart<CompilationAnalyzerService>()
                 .WithPart<CompilationAnalyzerAssemblyLoader>()
                 .CreateContainer();
+
             var host = MefHostServices.Create(container);
+            // belive me, I did try DesktopMefHostServices.DefaultServices
             var workspace = new AdhocWorkspace(host, WorkspaceKind);
             return workspace;
         }
@@ -181,7 +183,7 @@ namespace StackExchange.Precompilation
         {
             var projectInfo = CommandLineProject.CreateProjectInfo(CscArgs.OutputFileName, "C#", Environment.CommandLine, _precompilationCommandLineArgs.BaseDirectory, workspace);
             var loaders = new List<RazorParser>();
-            Func<TextLoader, TextLoader> addCshtmlLoader = l =>
+            TextLoader addCshtmlLoader(TextLoader l)
             {
                 var c = new RazorParser(this, l, workspace);
                 loaders.Add(c);
@@ -200,7 +202,7 @@ namespace StackExchange.Precompilation
             {
                 l.Start();
             }
-            await Task.WhenAll(loaders.Select(x => x.Result).ToArray());
+            await Task.WhenAll(loaders.Select(x => x.Result));
 
             return workspace.AddProject(projectInfo);
         }
@@ -233,13 +235,36 @@ namespace StackExchange.Precompilation
             }
         }
 
+        private bool TryOpenFile(string path, out Stream stream)
+        {
+            stream = null;
+            if (string.IsNullOrEmpty(path))
+            {
+                return false;
+            }
+            if (!File.Exists(path))
+            {
+                Diagnostics.Add(Diagnostic.Create(ERR_FileNotFound, null, path));
+                return false;
+            }
+            try
+            {
+                stream = File.OpenRead(path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Add(Diagnostic.Create(ERR_NoSourceFile, null, path, ex.Message));
+                return false;
+            }
+        }
+
         private Stream CreateWin32Resource(CSharpCompilation compilation)
         {
-            if (CscArgs.Win32ResourceFile != null)
-                return File.OpenRead(CscArgs.Win32ResourceFile);
+            if (TryOpenFile(CscArgs.Win32ResourceFile, out var stream)) return stream;
 
-            using (var manifestStream = compilation.Options.OutputKind != OutputKind.NetModule ? CscArgs.Win32Manifest != null ? File.OpenRead(CscArgs.Win32Manifest) : null : null)
-            using (var iconStream = CscArgs.Win32Icon != null ? File.OpenRead(CscArgs.Win32Icon) : null)
+            using (var manifestStream = compilation.Options.OutputKind != OutputKind.NetModule && TryOpenFile(CscArgs.Win32Manifest, out var manifest) ? manifest : null)
+            using (var iconStream = TryOpenFile(CscArgs.Win32Icon, out var icon) ? icon : null)
                 return compilation.CreateDefaultWin32Resources(true, CscArgs.NoWin32Manifest, manifestStream, iconStream);
         }
 
@@ -260,7 +285,7 @@ namespace StackExchange.Precompilation
 
             using (var peStream = new MemoryStream())
             using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? new MemoryStream() : null)
-            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream(): null)
+            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
             using (var win32Resources = CreateWin32Resource(compilation))
             {
                 // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
@@ -271,6 +296,10 @@ namespace StackExchange.Precompilation
                     win32Resources: win32Resources,
                     manifestResources: CscArgs.ManifestResources,
                     options: CscArgs.EmitOptions,
+                    sourceLinkStream: TryOpenFile(CscArgs.SourceLink, out var sourceLinkStream) ? sourceLinkStream : null,
+                    embeddedTexts: CscArgs.EmbeddedFiles.AsEnumerable()
+                        .Select(x => TryOpenFile(x.Path, out var embeddedText) ? EmbeddedText.FromStream(x.Path, embeddedText) : null)
+                        .Where(x => x != null),
                     debugEntryPoint: null);
 
                 Diagnostics.AddRange(emitResult.Diagnostics);
