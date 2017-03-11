@@ -80,23 +80,18 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Composition.AttributedModel, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Composition.1.0.27\lib\portable-net45+win8+wp8+wpa81\System.Composition.AttributedModel.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System.Composition.Convention, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Composition.1.0.27\lib\portable-net45+win8+wp8+wpa81\System.Composition.Convention.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System.Composition.Hosting, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Composition.1.0.27\lib\portable-net45+win8+wp8+wpa81\System.Composition.Hosting.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System.Composition.Runtime, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Composition.1.0.27\lib\portable-net45+win8+wp8+wpa81\System.Composition.Runtime.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System.Composition.TypedParts, Version=1.0.27.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.Composition.1.0.27\lib\portable-net45+win8+wp8+wpa81\System.Composition.TypedParts.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Console, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
@@ -252,6 +247,41 @@
     <Error Condition="!Exists('..\packages\PdbGit.3.0.41\build\PdbGit.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\PdbGit.3.0.41\build\PdbGit.props'))" />
     <Error Condition="!Exists('..\packages\PdbGit.3.0.41\build\PdbGit.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\PdbGit.3.0.41\build\PdbGit.targets'))" />
   </Target>
+
+  <!-- don't copy stuff to bin folder, since that's what happens in when the nuget package is used too -->
+  <Target Name="RemoveReferences" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Update="@(Reference)">
+        <Private>False</Private>
+      </Reference>
+      <ProjectReference Update="@(ProjectReference)">
+        <Private>False</Private>
+      </ProjectReference>
+    </ItemGroup>
+  </Target>
+
+  <!-- embed compile-time references into the assembly -->
+  <Target Name="EmbedReferences" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <EmbeddedReference Include="System.Composition.Runtime" />
+      <EmbeddedReference Include="System.Composition.Hosting" />
+      <EmbeddedReference Include="System.Composition.TypedParts" />
+      <EmbeddedReference Include="System.Composition.AttributedModel" />
+      <EmbeddedReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+      <EmbeddedReference Include="Microsoft.CodeAnalysis.Workspaces" />
+      <EmbeddedReference Include="Microsoft.CodeAnalysis.Workspaces.Desktop" />
+
+      <!-- ... with a little bit of msbuild black magic -->
+      <_ReferencePath Include="@(Reference->'%(HintPath)')" Condition="'%(Reference.HintPath)' != ''" />
+      <_Reference_X_Embedded Include="@(_ReferencePath)">
+        <_Target>%(EmbeddedReference.Identity)</_Target>
+      </_Reference_X_Embedded>
+      <EmbeddedResource Include="%(_Reference_X_Embedded.Identity)" Condition="'%(_Reference_X_Embedded.FileName)' == '%(_Reference_X_Embedded._Target)'">
+        <LogicalName>embedded_ref://%(_Reference_X_Embedded._Target)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+    <Message Text="Adding EmbeddedResource: %(EmbeddedResource.LogicalName) -&gt; %(EmbeddedResource.Identity)" />
+  </Target>
   <Import Project="..\packages\PdbGit.3.0.41\build\PdbGit.targets" Condition="Exists('..\packages\PdbGit.3.0.41\build\PdbGit.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -259,5 +289,5 @@
   </Target>
   <Target Name="AfterBuild">
   </Target>
-  -->
+  -->	
 </Project>
