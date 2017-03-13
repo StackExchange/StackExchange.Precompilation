@@ -22,6 +22,6 @@
     </releaseNotes>
   </metadata>
   <files>
-      <file src="bin\Release\StackExchange.Precompilation.*" target="lib\net45" />
+      <file src="bin\Release\StackExchange.Precompilation.*" target="lib\net462" />
   </files>
 </package>
