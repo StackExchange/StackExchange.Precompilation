@@ -424,7 +424,7 @@ namespace StackExchange.Precompilation
 
         private bool TryResolveView(HttpContextBase httpContext, IDisplayMode displayMode, ref string path, ICollection<string> viewLocationsSearched)
         {
-            path = NormalizeViewName(VirtualPathUtility.ToAbsolute(path)); // resolve relative path portions
+            path = NormalizeViewName(VirtualPathUtility.ToAppRelative(path)); // resolve relative path portions
             var displayInfo = displayMode.GetDisplayInfo(httpContext, path, _views.ContainsKey);
 
             if (displayInfo == null || displayInfo.FilePath == null)

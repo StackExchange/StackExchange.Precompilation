@@ -26,7 +26,7 @@ namespace Test.WebApp
             ViewEngines.Engines.Clear();
 #if !DEBUG
             // use precompiled engine first (supports some C# 6),
-            ViewEngines.Engines.Add(new PrecompiledViewEngine(typeof(HomeController).Assembly));
+            ViewEngines.Engines.Add(new PrecompiledViewEngine(typeof(HomeController).Assembly, typeof(ExternalViews).Assembly));
 #endif
             // fallback to RoslynRazorViewEngine (RazorViewEngine doesn't support C# 6).
             ViewEngines.Engines.Add(new RoslynRazorViewEngine());

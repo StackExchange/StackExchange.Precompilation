@@ -37,6 +37,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilation.Tests", "StackExchange.Precompilation.Tests\StackExchange.Precompilation.Tests.csproj", "{B6306D9B-0770-44DF-AADE-5703B1DCFD67}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WebApp.ExternalViews", "Test.WebApp.ExternalViews\Test.WebApp.ExternalViews.csproj", "{2BA24772-F7B0-4652-A430-2F4C2262E882}"
+	ProjectSection(ProjectDependencies) = postProject
+		{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9} = {31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +76,10 @@ Global
 		{B6306D9B-0770-44DF-AADE-5703B1DCFD67}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B6306D9B-0770-44DF-AADE-5703B1DCFD67}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B6306D9B-0770-44DF-AADE-5703B1DCFD67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
