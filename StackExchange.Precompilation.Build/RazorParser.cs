@@ -16,51 +16,41 @@ namespace StackExchange.Precompilation
 {
     class RazorParser : TextLoader
     {
-        public Compilation Compilation { get; }
+        private readonly Compilation _compilation;
         private readonly WebConfigurationFileMap _configMap;
-        private readonly TextLoader _originalLoader;
-        private readonly Workspace _workspace;
-        private readonly TaskCompletionSource<TextAndVersion> _result;
-            
-        public RazorParser(Compilation compilation, TextLoader originalLoader, Workspace workspace)
+        private readonly Task<TextAndVersion> _result;
+        private readonly CancellationTokenSource _cts;
+
+        public RazorParser(Compilation compilation, TextLoader originalLoader, Workspace workspace, CancellationTokenSource cts)
         {
-            Compilation = compilation;
-            _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(Compilation.CurrentDirectory.FullName, true) } } };
-            _originalLoader = originalLoader;
-            _workspace = workspace;
-            _result = new TaskCompletionSource<TextAndVersion>();
+            _cts = cts;
+            _compilation = compilation;
+            _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(_compilation.CurrentDirectory.FullName, true) } } };
+            _result = Task.Run(async () => 
+            {
+                var result = await originalLoader.LoadTextAndVersionAsync(workspace, null, _cts.Token);
+                var sourceText = result.Text.ToString();
+                using (var sourceReader = new StringReader(sourceText))
+                using (var generatedStream = new MemoryStream())
+                {
+                    WrapCshtmlReader(result.FilePath, sourceReader, generatedStream);
+
+                    result = TextAndVersion.Create(SourceText.From(generatedStream, _compilation.Encoding, _compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: result.Text.CanBeEmbedded), result.Version, result.FilePath);
+                }
+                return result;
+            }, _cts.Token);
         }
 
-        public void Start()
+        public override Task<TextAndVersion> LoadTextAndVersionAsync(Workspace workspace, DocumentId documentId, CancellationToken cancellationToken)
         {
-            Task.Run(async () => {
-                try
-                {
-                    var result = await _originalLoader.LoadTextAndVersionAsync(_workspace, null, default(CancellationToken));
-                    var sourceText = result.Text.ToString();
-                    using (var sourceReader = new StringReader(sourceText))
-                    using (var generatedStream = new MemoryStream())
-                    {
-                        WrapCshtmlReader(result.FilePath, sourceReader, generatedStream);
-
-                        result = TextAndVersion.Create(SourceText.From(generatedStream, Compilation.Encoding, Compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: result.Text.CanBeEmbedded), result.Version, result.FilePath);
-                        _result.SetResult(result);
-                    }
-                }
-                catch(Exception ex)
-                {
-                    _result.SetException(ex);
-                }
-            });
+            cancellationToken.Register(_cts.Cancel);
+            return _result;
         }
-
-        public Task Result => _result.Task;
-        public override Task<TextAndVersion> LoadTextAndVersionAsync(Workspace workspace, DocumentId documentId, CancellationToken cancellationToken) => _result.Task;
 
         private void WrapCshtmlReader(string sourcePath, TextReader sourceReader, MemoryStream generatedStream)
         {
             var viewFullPath = sourcePath;
-            var viewVirtualPath = GetRelativeUri(sourcePath, Compilation.CurrentDirectory.FullName);
+            var viewVirtualPath = GetRelativeUri(sourcePath, _compilation.CurrentDirectory.FullName);
             var viewConfig = WebConfigurationManager.OpenMappedWebConfiguration(_configMap, viewVirtualPath);
             var razorConfig = viewConfig.GetSectionGroup("system.web.webPages.razor") as RazorWebSectionGroup;
             var host = razorConfig == null
@@ -68,7 +58,7 @@ namespace StackExchange.Precompilation
                 : WebRazorHostFactory.CreateHostFromConfig(razorConfig, viewVirtualPath, viewFullPath);
 
             using (var provider = CodeDomProvider.CreateProvider("csharp"))
-            using (var generatedWriter = new StreamWriter(generatedStream, Compilation.Encoding, 1024, leaveOpen: true))
+            using (var generatedWriter = new StreamWriter(generatedStream, _compilation.Encoding, 1024, leaveOpen: true))
             {
                 var engine = new RazorTemplateEngine(host);
                 var razorOut = engine.GenerateCode(sourceReader, null, null, viewFullPath);
