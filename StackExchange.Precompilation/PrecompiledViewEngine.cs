@@ -195,16 +195,17 @@ namespace StackExchange.Precompilation
 
             foreach (var asm in assemblies)
             {
-                List<Type> viewTypes;
+                // https://msdn.microsoft.com/en-us/library/system.reflection.assembly.gettypes(v=vs.110).aspx#Anchor_2
+                Type[] asmTypes;
                 try
                 {
-                    viewTypes = asm.GetTypes().Where(t => typeof(WebPageRenderingBase).IsAssignableFrom(t)).ToList();
+                    asmTypes = asm.GetTypes();
                 }
-                catch (Exception e)
+                catch (ReflectionTypeLoadException thatsWhyWeCantHaveNiceThings)
                 {
-                    throw e;
+                    asmTypes = thatsWhyWeCantHaveNiceThings.Types;
                 }
-
+                var viewTypes = asmTypes.Where(t => typeof(WebPageRenderingBase).IsAssignableFrom(t)).ToList();
 
                 var sourceDirectory = asm.GetCustomAttribute<CompiledFromDirectoryAttribute>()?.SourceDirectory;
 
