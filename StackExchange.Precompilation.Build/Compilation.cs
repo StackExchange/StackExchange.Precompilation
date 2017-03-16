@@ -98,7 +98,7 @@ namespace StackExchange.Precompilation
                     context.Before(new BeforeCompileContext
                     {
                         Arguments = CscArgs,
-                        Compilation = compilation,
+                        Compilation = compilation.AddSyntaxTrees(GeneratedSyntaxTrees()),
                         Diagnostics = Diagnostics,
                         Resources = CscArgs.ManifestResources,
                     });
