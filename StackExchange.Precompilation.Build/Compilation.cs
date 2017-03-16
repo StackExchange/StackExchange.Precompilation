@@ -16,6 +16,7 @@ using Microsoft.CodeAnalysis.Host;
 using System.Composition.Hosting;
 using Microsoft.CodeAnalysis.Host.Mef;
 using System.Composition;
+using System.Threading;
 
 namespace StackExchange.Precompilation
 {
@@ -67,8 +68,6 @@ namespace StackExchange.Precompilation
                 var sdkDirectory = RuntimeEnvironment.GetRuntimeDirectory();
 
                 CscArgs = CSharpCommandLineParser.Default.Parse(_precompilationCommandLineArgs.Arguments, _precompilationCommandLineArgs.BaseDirectory, sdkDirectory);
-
-
                 Diagnostics = new List<Diagnostic>(CscArgs.Errors);
 
                 // load those before anything else hooks into our AssemlbyResolve...
@@ -81,22 +80,21 @@ namespace StackExchange.Precompilation
                 Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
 
                 using (var workspace = CreateWokspace())
+                using (var analysisCancellation = new CancellationTokenSource())
                 {
                     var project = await CreateProjectAsync(workspace);
+                    var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray());
                     var compilation = await project.GetCompilationAsync() as CSharpCompilation;
 
-                    var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
+                    var analyzers = await analyzerLoader;
+
+                    Task<AnalysisResult> analysisTask = null;
                     if (analyzers.Any())
                     {
-                        var analysis = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions);
-                        if (analysis.Analyzers.Any())
-                        {
-                            Diagnostics.AddRange(await analysis.GetAnalyzerDiagnosticsAsync());
-                        }
+                        analysisTask = Task.Run(() => compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(analysisCancellation.Token));
                     }
 
                     var context = new CompileContext(compilationModules);
-
                     context.Before(new BeforeCompileContext
                     {
                         Arguments = CscArgs,
@@ -105,7 +103,27 @@ namespace StackExchange.Precompilation
                         Resources = CscArgs.ManifestResources,
                     });
 
-                    var emitResult = Emit(context);
+                    var emitResult = await Emit(context);
+
+                    if (analysisTask != null)
+                    {
+                        analysisCancellation.Cancel();
+                        try
+                        {
+                            var analysisResult = await analysisTask;
+                            Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
+
+                            foreach(var info in analysisResult.AnalyzerTelemetryInfo)
+                            {
+                                Console.WriteLine(info.Value.ToString());
+                            }
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            Console.WriteLine("warning: analysis canceled");
+                        }
+                    }
+
                     return emitResult.Success;
                 }
             }
@@ -268,7 +286,7 @@ namespace StackExchange.Precompilation
                 return compilation.CreateDefaultWin32Resources(true, CscArgs.NoWin32Manifest, manifestStream, iconStream);
         }
 
-        private EmitResult Emit(CompileContext context)
+        private async Task<EmitResult> Emit(CompileContext context)
         {
             var compilation = context.BeforeCompileContext.Compilation;
             var pdbPath = CscArgs.PdbPath;
@@ -303,6 +321,7 @@ namespace StackExchange.Precompilation
                     debugEntryPoint: null);
 
                 Diagnostics.AddRange(emitResult.Diagnostics);
+
                 context.After(new AfterCompileContext
                 {
                     Arguments = CscArgs,
@@ -317,7 +336,7 @@ namespace StackExchange.Precompilation
                 // if the output files are there, msbuild incremental build thinks the previous build succeeded
                 if (emitResult.Success)
                 {
-                    Task.WaitAll(
+                    await Task.WhenAll(
                         DumpToFileAsync(outputPath, peStream),
                         DumpToFileAsync(pdbPath, pdbStream),
                         DumpToFileAsync(CscArgs.DocumentationPath, xmlDocumentationStream));
