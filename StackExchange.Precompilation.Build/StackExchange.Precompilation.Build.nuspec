@@ -15,6 +15,7 @@
     <dependencies>
       <dependency id="StackExchange.Precompilation.Metaprogramming" version="$version$" />
     </dependencies>
+    <developmentDependency>true</developmentDependency>
   </metadata>
   <files>
       <file src="bin\Release\StackExchange.Precompiler.*" target="tools" />
