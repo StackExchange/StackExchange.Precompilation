@@ -98,7 +98,7 @@ namespace StackExchange.Precompilation
         {
             var name = ApplyPolicy(e.Name);
 
-            return resolvedAssemblies.GetOrAdd(name, key => new Lazy<Assembly>(() => null, false)).Value;
+            return resolvedAssemblies.GetOrAdd(name, key => new Lazy<Assembly>(() => null, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
         }
         private static Lazy<Assembly> ResolvedAssembly(Func<Assembly> loader) => new Lazy<Assembly>(loader, LazyThreadSafetyMode.ExecutionAndPublication);
     }
