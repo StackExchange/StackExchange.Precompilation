@@ -94,13 +94,14 @@ namespace StackExchange.Precompilation
 
         private Assembly ResolveAssembly(object sender, ResolveEventArgs e)
         {
-            var requestedAssembly = new AssemblyName(ApplyPolicy(e.Name));
+            var name = ApplyPolicy(e.Name);
+            var assemblyName = new AssemblyName(name);
 
-            return resolvedAssemblies.GetOrAdd(requestedAssembly.FullName, NullAseembly).Value ??
-                   resolvedAssemblies.GetOrAdd(requestedAssembly.Name, NullAseembly).Value;
+            return resolvedAssemblies.GetOrAdd(assemblyName.FullName, NullAssembly).Value ??
+                   resolvedAssemblies.GetOrAdd(assemblyName.Name, NullAssembly).Value;
         }
 
-        private static Lazy<Assembly> NullAseembly(string key) => new Lazy<Assembly>(() => null, LazyThreadSafetyMode.ExecutionAndPublication);
+        private static Lazy<Assembly> NullAssembly(string key) => new Lazy<Assembly>(() => null, LazyThreadSafetyMode.ExecutionAndPublication);
 
         private static Lazy<Assembly> ResolvedAssembly(Func<Assembly> loader) => new Lazy<Assembly>(loader, LazyThreadSafetyMode.ExecutionAndPublication);
     }
