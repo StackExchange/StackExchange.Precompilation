@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -76,7 +75,6 @@ namespace StackExchange.Precompilation
                 })
                 .Where(x => x != null)
                 .ForAll(name => Resolve(name, () => Assembly.LoadFile(new Uri(name.CodeBase).LocalPath)));
-
         }
 
         private void RegisterDomain(AppDomain domain)
@@ -97,9 +95,14 @@ namespace StackExchange.Precompilation
         private Assembly ResolveAssembly(object sender, ResolveEventArgs e)
         {
             var name = ApplyPolicy(e.Name);
+            var assemblyName = new AssemblyName(name);
 
-            return resolvedAssemblies.GetOrAdd(name, key => new Lazy<Assembly>(() => null, false)).Value;
+            return resolvedAssemblies.GetOrAdd(assemblyName.FullName, NullAssembly).Value ??
+                   resolvedAssemblies.GetOrAdd(assemblyName.Name, NullAssembly).Value;
         }
+
+        private static Lazy<Assembly> NullAssembly(string key) => new Lazy<Assembly>(() => null, LazyThreadSafetyMode.ExecutionAndPublication);
+
         private static Lazy<Assembly> ResolvedAssembly(Func<Assembly> loader) => new Lazy<Assembly>(loader, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 }
