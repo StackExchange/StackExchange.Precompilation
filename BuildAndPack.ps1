@@ -2,26 +2,24 @@ param(
     [parameter(Position=0)]
     [string] $VersionSuffix
 )
-set -name semver -scope global -value (get-content .\semver.txt)
 
-$epoch = [math]::truncate((new-timespan -start (get-date -date "01/01/1970") -end (get-date)).TotalSeconds)
-if ($VersionSuffix)
+if ($semver)
 {
-    $version = "$semver$VersionSuffix"
-    Write-Host "Packing explicit version $version"
 }
 else
 {
-    $version = "$semver-local$epoch"
-    Write-Host "Packing local package $version"
+    set -name semver -scope global -value (get-content .\semver.txt)
 }
 
-if ($env:AppVeyor)
+if ($VersionSuffix)
 {
-    Update-AppveyorBuild -Version $version
+    $version = "$semver$VersionSuffix"
 }
-
-write-host "##teamcity[setParameter name='semver' value='$semver']"
+else
+{
+    $epoch = [math]::truncate((new-timespan -start (get-date -date "01/01/1970") -end (get-date)).TotalSeconds)    
+    $version = "$semver-local$epoch"
+}
 
 msbuild /m /p:Configuration=Release /v:q /nologo
 
