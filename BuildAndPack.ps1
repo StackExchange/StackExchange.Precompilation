@@ -35,7 +35,7 @@ get-childitem -file -recurse -include ("StackExchange.Precompiler.*") |
 
 
 # make sure we can compile with the assemblies from the tools dir
-msbuild /m /t:Rebuild /p:Configuration=Debug /p:SECompilerPath=..\tools /v:q /nologo
+msbuild /m /t:Rebuild /p:Configuration=Release /p:SECompilerPath=..\tools /v:q /nologo
 
 new-item .\packages\obj -type directory -force | out-null
 get-childitem *.nuspec -Recurse | 
