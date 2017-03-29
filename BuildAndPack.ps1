@@ -1,14 +1,13 @@
 param(
     [parameter(Position=0)]
-    [string] $VersionSuffix
+    [string] $VersionSuffix,
+    [parameter(Position=0)]
+    [string] $GitCommitId
 )
 
-if ($semver)
+if (-not $semver)
 {
-}
-else
-{
-    set -name semver -scope global -value (get-content .\semver.txt)
+    set-variable -name semver -scope global -value (get-content .\semver.txt)
 }
 
 if ($VersionSuffix)
@@ -21,10 +20,14 @@ else
     $version = "$semver-local$epoch"
 }
 
-msbuild /m /p:Configuration=Release /v:q /nologo
+if(-not $GitCommitId)
+{
+    $GitCommitId = $(git rev-parse HEAD)
+}
+
+msbuild /m /p:Configuration=Release /v:q /nologo "/p:GitCommitId=$GitCommitId" "/p:PdbGitEnabled=true;PdbGitSkipVerify=true;PdbGitGitRemoteUrl=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation"
 
 new-item tools -type directory -force -ea stop
-
 get-childitem -file -recurse -include ("StackExchange.Precompiler.*") |
      where { $_.Directory -match "bin\\Release" -and $_.FullName -notmatch "Test" } |
      select -ExpandProperty FullName |
