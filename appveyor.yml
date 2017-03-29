@@ -1,0 +1,23 @@
+version: '{build}'
+image: Visual Studio 2017
+assembly_info:
+  patch: true
+  file: '**\AssemblyInfo.*'
+  assembly_version: $(semver)
+  assembly_file_version: $(semver).{build}
+  assembly_informational_version: '{version}'
+install:
+- ps: >-
+    set -name semver -scope global -value (get-content .\semver.txt)
+
+    $env:semver = $semver
+
+    $env:package_suffix = "-alpha$env:appveyor_build_number"
+
+    update-appveyorbuild -Version "$env:semver$env:package_suffix"
+nuget:
+  disable_publish_on_pr: true
+build_script:
+- ps: .\BuildAndPack.ps1 -VersionSuffix "$env:package_suffix"
+artifacts:
+- path: packages/obj/*.nupkg
