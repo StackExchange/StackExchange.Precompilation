@@ -1,6 +1,8 @@
 StackExchange.Precompilation
 ============================
 
+[![Build status](https://ci.appveyor.com/api/projects/status/aym1n2f2qr264199/branch/master?svg=true)](https://ci.appveyor.com/project/m0sa/stackexchange-precompilation/branch/master)
+
 Replacing csc.exe
 -----------------
 
@@ -41,5 +43,6 @@ if you have an existing project with StackExchange.Precompilation packages and e
 - run BuildAndPack.ps1 (requires a console with VS env vars in your PATH, I recommend powershell with Posh-VsVars)
 - setup a nuget source pointing at .\packages\obj
 - after that you can update the packages StackExchange.Precompilation in your target project from the packages\obj source
-- this gives you local *-alpha{timestamp} suffixed packages instead of the *-beta{build} ones produced by the CI build
+- this gives you local *-local{timestamp} suffixed packages instead of the *-alpha{build} ones produced by the CI build
 - PROTIP: if you want to attach an debugger to the compilation of your project or any of the Test.* projects, add a `System.Diagnostics.Debugger.Launch()` statement somewhere in the code ;)
+- CI *-alpha{build} packages are available via an appveyor nuget feed https://ci.appveyor.com/nuget/stackexchange-precompilation-0ok3kf175b2j/
