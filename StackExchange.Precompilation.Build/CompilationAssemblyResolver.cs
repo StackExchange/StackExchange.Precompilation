@@ -27,7 +27,7 @@ namespace StackExchange.Precompilation
         {
             void Resolve(AssemblyName name, Func<Assembly> loader)
             {
-                var resolved = new Lazy<Assembly>(loader, LazyThreadSafetyMode.ExecutionAndPublication)
+                var resolved = new Lazy<Assembly>(loader, LazyThreadSafetyMode.ExecutionAndPublication);
                 var keyName = new AssemblyName(ApplyPolicy(name.FullName));
                 resolvedAssemblies.AddOrUpdate(keyName.FullName, resolved, (key, existing) => existing); // TODO log conflicting binds?
                 resolvedAssemblies.AddOrUpdate(keyName.Name, resolved, (key, existing) => existing); // TODO log conflicting partial binds?
