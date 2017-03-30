@@ -83,13 +83,29 @@ namespace StackExchange.Precompilation
                 using (var analysisCts = new CancellationTokenSource())
                 {
                     var project = CreateProject(workspace);
-                    var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray());
-                    var compilation = await project.GetCompilationAsync() as CSharpCompilation;
+                    CSharpCompilation compilation = null;
+                    try
+                    {
+                        compilation = await project.GetCompilationAsync() as CSharpCompilation;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("error: failed to create compilation: " + ex.Message);
+                        return false;
+                    }
 
                     var analysisTask = Task.Run(async () => {
-                        var analyzers = await analyzerLoader;
+                        var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
                         if (analyzers.IsEmpty) return null;
-                        return await compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(analysisCts.Token);
+                        try
+                        {
+                            return await compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(analysisCts.Token);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("warning: analysis failed: " + ex.Message);
+                            return null;
+                        }
                     });
 
                     var context = new CompileContext(compilationModules);
@@ -100,12 +116,23 @@ namespace StackExchange.Precompilation
                         Diagnostics = Diagnostics,
                         Resources = CscArgs.ManifestResources,
                     });
-
-                    var emitResult = await Emit(context);
+                    EmitResult emitResult = null;
+                    try
+                    {
+                        emitResult = await Emit(context);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("error: emit failed: " + ex.Message);
+                        return false;
+                    }
+                    finally
+                    {
+                        analysisCts.Cancel();
+                    }
 
                     try
                     {
-                        analysisCts.Cancel();
                         var analysisResult = await analysisTask;
                         if (analysisResult != null)
                         {
