@@ -118,7 +118,7 @@ namespace StackExchange.Precompilation
                                 Console.WriteLine(info.Value.ToString());
                             }
                         }
-                        catch (TaskCanceledException)
+                        catch (OperationCanceledException)
                         {
                             Console.WriteLine("warning: analysis canceled");
                         }
