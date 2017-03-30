@@ -84,9 +84,16 @@ namespace StackExchange.Precompilation
                 {
                     var project = CreateProject(workspace);
                     CSharpCompilation compilation = null;
+                    CompilationWithAnalyzers compilationWithAnalyzers = null;
                     try
                     {
                         compilation = await project.GetCompilationAsync() as CSharpCompilation;
+                        var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
+                        if (!analyzers.IsEmpty)
+                        {
+                            compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, analysisCts.Token);
+                            compilation = compilationWithAnalyzers.Compilation as CSharpCompilation;
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -95,15 +102,19 @@ namespace StackExchange.Precompilation
                     }
 
                     var analysisTask = Task.Run(async () => {
-                        var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
-                        if (analyzers.IsEmpty) return null;
+                        if (compilationWithAnalyzers == null) return null;
                         try
                         {
-                            return await compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(analysisCts.Token);
+                            return await compilationWithAnalyzers.GetAnalysisResultAsync(analysisCts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            Console.WriteLine("warning: analysis canceled");
+                            return null;
                         }
                         catch (Exception ex)
                         {
-                            Console.WriteLine("warning: analysis failed: " + ex.Message);
+                            Console.WriteLine("error: analysis failed: " + ex.Message);
                             return null;
                         }
                     });
@@ -131,22 +142,15 @@ namespace StackExchange.Precompilation
                         analysisCts.Cancel();
                     }
 
-                    try
+                    var analysisResult = await analysisTask;
+                    if (analysisResult != null)
                     {
-                        var analysisResult = await analysisTask;
-                        if (analysisResult != null)
-                        {
-                            Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
+                        Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
 
-                            foreach (var info in analysisResult.AnalyzerTelemetryInfo)
-                            {
-                                Console.WriteLine("info: " + info.Value.ToString());
-                            }
+                        foreach (var info in analysisResult.AnalyzerTelemetryInfo)
+                        {
+                            Console.WriteLine("info: " + info.Value.ToString());
                         }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Console.WriteLine("warning: analysis canceled");
                     }
 
                     return emitResult.Success;
