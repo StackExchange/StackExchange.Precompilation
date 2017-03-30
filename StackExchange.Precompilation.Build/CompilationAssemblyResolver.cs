@@ -72,7 +72,19 @@ namespace StackExchange.Precompilation
                     }
                 })
                 .Where(x => x != null)
-                .ForAll(name => Resolve(name, () => Assembly.LoadFile(new Uri(name.CodeBase).LocalPath)));
+                .ForAll(name => Resolve(name, () =>
+                {
+                    var path = new Uri(name.CodeBase).LocalPath;
+                    try
+                    {
+                        return Assembly.LoadFile(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"warning: Couldn't load reference '{name.FullName}' from '{path}' - '{ex.Message}'");
+                        return null;
+                    }
+                }));
         }
 
         private void RegisterDomain(AppDomain domain)
