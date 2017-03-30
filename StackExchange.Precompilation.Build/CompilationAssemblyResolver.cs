@@ -21,14 +21,12 @@ namespace StackExchange.Precompilation
         }
 
         private AppDomain domain;
-        private readonly ConcurrentBag<Tuple<AssemblyName, Func<Assembly>>> assemblyLoaders = new ConcurrentBag<Tuple<AssemblyName, Func<Assembly>>>();
         private readonly ConcurrentDictionary<string, Lazy<Assembly>> resolvedAssemblies = new ConcurrentDictionary<string, Lazy<Assembly>>();
 
         private void Setup(string[] references)
         {
             void Resolve(AssemblyName name, Func<Assembly> loader)
             {
-                assemblyLoaders.Add(Tuple.Create(name, loader));
 
                 var keyName = new AssemblyName(ApplyPolicy(name.FullName));
                 resolvedAssemblies.AddOrUpdate(keyName.FullName, ResolvedAssembly(loader), (key, existing) => existing); // TODO log conflicting binds?
