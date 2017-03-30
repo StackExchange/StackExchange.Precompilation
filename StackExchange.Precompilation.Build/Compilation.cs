@@ -84,7 +84,7 @@ namespace StackExchange.Precompilation
                 {
                     var project = await CreateProjectAsync(workspace, cts);
                     var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray(), cts.Token);
-                    var compilation = await project.GetCompilationAsync(cts.Token) as CSharpCompilation;
+                    var compilation = await project.GetCompilationAsync() as CSharpCompilation;
 
                     var analyzers = await analyzerLoader;
 
