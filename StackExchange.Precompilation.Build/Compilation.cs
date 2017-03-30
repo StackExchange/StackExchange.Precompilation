@@ -80,19 +80,17 @@ namespace StackExchange.Precompilation
                 Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
 
                 using (var workspace = CreateWokspace())
-                using (var cts = new CancellationTokenSource())
+                using (var analysisCts = new CancellationTokenSource())
                 {
-                    var project = await CreateProjectAsync(workspace, cts);
-                    var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray(), cts.Token);
+                    var project = CreateProject(workspace);
+                    var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray(), analysisCts.Token);
                     var compilation = await project.GetCompilationAsync() as CSharpCompilation;
 
-                    var analyzers = await analyzerLoader;
-
-                    Task<AnalysisResult> analysisTask = null;
-                    if (analyzers.Any())
-                    {
-                        analysisTask = Task.Run(() => compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(cts.Token), cts.Token);
-                    }
+                    var analysisTask = Task.Run(async () => {
+                        var analyzers = await analyzerLoader;
+                        if (analyzers.IsEmpty) return null;
+                        return await compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(analysisCts.Token);
+                    }, analysisCts.Token);
 
                     var context = new CompileContext(compilationModules);
                     context.Before(new BeforeCompileContext
@@ -105,23 +103,20 @@ namespace StackExchange.Precompilation
 
                     var emitResult = await Emit(context);
 
-                    if (analysisTask != null)
+                    analysisCts.Cancel();
+                    try
                     {
-                        cts.Cancel();
-                        try
-                        {
-                            var analysisResult = await analysisTask;
-                            Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
+                        var analysisResult = await analysisTask;
+                        Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
 
-                            foreach (var info in analysisResult.AnalyzerTelemetryInfo)
-                            {
-                                Console.WriteLine(info.Value.ToString());
-                            }
-                        }
-                        catch (OperationCanceledException)
+                        foreach (var info in analysisResult.AnalyzerTelemetryInfo)
                         {
-                            Console.WriteLine("warning: analysis canceled");
+                            Console.WriteLine("info: " + info.Value.ToString());
                         }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Console.WriteLine("warning: analysis canceled");
                     }
 
                     return emitResult.Success;
@@ -197,7 +192,7 @@ namespace StackExchange.Precompilation
             return workspace;
         }
 
-        private async Task<Project> CreateProjectAsync(AdhocWorkspace workspace, CancellationTokenSource loaderCts)
+        private Project CreateProject(AdhocWorkspace workspace)
         {
             var projectInfo = CommandLineProject.CreateProjectInfo(CscArgs.OutputFileName, "C#", Environment.CommandLine, _precompilationCommandLineArgs.BaseDirectory, workspace);
 
@@ -206,7 +201,7 @@ namespace StackExchange.Precompilation
                     projectInfo
                         .Documents
                         .Select(d => Path.GetExtension(d.FilePath) == ".cshtml"
-                            ? d.WithTextLoader(new RazorParser(this, d.TextLoader, workspace, loaderCts))
+                            ? d.WithTextLoader(new RazorParser(this, d.TextLoader, workspace))
                             : d));
 
             return workspace.AddProject(projectInfo);

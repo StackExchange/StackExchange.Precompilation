@@ -19,16 +19,14 @@ namespace StackExchange.Precompilation
         private readonly Compilation _compilation;
         private readonly WebConfigurationFileMap _configMap;
         private readonly Task<TextAndVersion> _result;
-        private readonly CancellationTokenSource _cts;
 
-        public RazorParser(Compilation compilation, TextLoader originalLoader, Workspace workspace, CancellationTokenSource cts)
+        public RazorParser(Compilation compilation, TextLoader originalLoader, Workspace workspace)
         {
-            _cts = cts;
             _compilation = compilation;
             _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(_compilation.CurrentDirectory.FullName, true) } } };
             _result = Task.Run(async () => 
             {
-                var result = await originalLoader.LoadTextAndVersionAsync(workspace, null, _cts.Token);
+                var result = await originalLoader.LoadTextAndVersionAsync(workspace, null, default(CancellationToken));
                 var sourceText = result.Text.ToString();
                 using (var sourceReader = new StringReader(sourceText))
                 using (var generatedStream = new MemoryStream())
@@ -38,12 +36,11 @@ namespace StackExchange.Precompilation
                     result = TextAndVersion.Create(SourceText.From(generatedStream, _compilation.Encoding, _compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: result.Text.CanBeEmbedded), result.Version, result.FilePath);
                 }
                 return result;
-            }, _cts.Token);
+            });
         }
 
         public override Task<TextAndVersion> LoadTextAndVersionAsync(Workspace workspace, DocumentId documentId, CancellationToken cancellationToken)
         {
-            cancellationToken.Register(_cts.Cancel);
             return _result;
         }
 
