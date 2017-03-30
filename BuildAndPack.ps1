@@ -1,8 +1,10 @@
 param(
     [parameter(Position=0)]
     [string] $VersionSuffix,
-    [parameter(Position=0)]
-    [string] $GitCommitId
+    [parameter(Position=1)]
+    [string] $GitCommitId,    
+    [parameter(Position=2)]
+    [string[]] $MsBuildArgs
 )
 
 if (-not $semver)
@@ -24,8 +26,19 @@ if(-not $GitCommitId)
 {
     $GitCommitId = $(git rev-parse HEAD)
 }
+if (-not $MsBuildArgs)
+{
+    $MsBuildArgs = @()
+}
 
-msbuild /m /p:Configuration=Release /v:q /nologo "/p:GitCommitId=$GitCommitId" "/p:PdbGitEnabled=true;PdbGitSkipVerify=true;PdbGitGitRemoteUrl=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation"
+$MsBuildArgs += "/m", "/nologo"
+
+$buildArgs =
+    "/t:Build",
+    "/p:Configuration=Release",
+    "/p:GitCommitId=$GitCommitId",
+    "/p:PdbGitEnabled=true;PdbGitSkipVerify=true;PdbGitGitRemoteUrl=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation"
+& "msbuild" $($buildArgs + $MsBuildArgs)
 
 if ($LASTEXITCODE -ne 0)
 {
@@ -40,7 +53,12 @@ get-childitem -file -recurse -include ("StackExchange.Precompiler.*") |
 
 
 # make sure we can compile with the assemblies from the tools dir
-msbuild /m /t:Rebuild /p:Configuration=Release /p:SECompilerPath=..\tools /v:q /nologo
+
+$testBuildArgs =
+    "/t:Rebuild",
+    "/p:SECompilerPath=..\tools",
+    "/p:Configuration=Debug"
+& "msbuild" $($testBuildArgs + $MsBuildArgs)
 if ($LASTEXITCODE -ne 0)
 {
     exit $LASTEXITCODE
