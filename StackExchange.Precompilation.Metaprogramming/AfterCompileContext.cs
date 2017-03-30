@@ -7,16 +7,16 @@ namespace StackExchange.Precompilation
 {
     public class AfterCompileContext
     {
-        public CSharpCommandLineArguments Arguments { get; set; }
+        public CSharpCommandLineArguments Arguments { get; internal set; }
 
-        public CSharpCompilation Compilation { get; set; }
+        public CSharpCompilation Compilation { get; internal set; }
 
-        public Stream AssemblyStream { get; set; }
+        public Stream AssemblyStream { get; internal set; }
 
-        public Stream SymbolStream { get; set; }
+        public Stream SymbolStream { get; internal set; }
 
-        public Stream XmlDocStream { get; set; }
+        public Stream XmlDocStream { get; internal set; }
 
-        public IList<Diagnostic> Diagnostics { get; set; }
+        public IList<Diagnostic> Diagnostics { get; internal set; }
     }
 }

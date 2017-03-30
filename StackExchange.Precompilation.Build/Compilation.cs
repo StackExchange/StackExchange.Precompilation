@@ -62,7 +62,6 @@ namespace StackExchange.Precompilation
         {
             try
             {
-
                 // this parameter was introduced in rc3, all call to it seem to be using RuntimeEnvironment.GetRuntimeDirectory()
                 // https://github.com/dotnet/roslyn/blob/0382e3e3fc543fc483090bff3ab1eaae39dfb4d9/src/Compilers/CSharp/csc/Program.cs#L18
                 var sdkDirectory = RuntimeEnvironment.GetRuntimeDirectory();
@@ -79,21 +78,31 @@ namespace StackExchange.Precompilation
                 }
                 Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
 
+                var pdbPath = CscArgs.PdbPath;
+                var outputPath = Path.Combine(CscArgs.OutputDirectory, CscArgs.OutputFileName);
+
+                if (!CscArgs.EmitPdb)
+                {
+                    pdbPath = null;
+                }
+                else if (string.IsNullOrWhiteSpace(pdbPath))
+                {
+                    pdbPath = Path.ChangeExtension(outputPath, ".pdb");
+                }
+
                 using (var workspace = CreateWokspace())
                 using (var analysisCts = new CancellationTokenSource())
+                using (var peStream = new MemoryStream())
+                using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? new MemoryStream() : null)
+                using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
                 {
+                    EmitResult emitResult = null;
                     var project = CreateProject(workspace);
                     CSharpCompilation compilation = null;
                     CompilationWithAnalyzers compilationWithAnalyzers = null;
                     try
                     {
                         compilation = await project.GetCompilationAsync() as CSharpCompilation;
-                        var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
-                        if (!analyzers.IsEmpty)
-                        {
-                            compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, analysisCts.Token);
-                            compilation = compilationWithAnalyzers.Compilation as CSharpCompilation;
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -101,59 +110,95 @@ namespace StackExchange.Precompilation
                         return false;
                     }
 
-                    var analysisTask = Task.Run(async () => {
-                        if (compilationWithAnalyzers == null) return null;
-                        try
-                        {
-                            return await compilationWithAnalyzers.GetAnalysisResultAsync(analysisCts.Token);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            Console.WriteLine("warning: analysis canceled");
-                            return null;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("error: analysis failed: " + ex.Message);
-                            return null;
-                        }
-                    });
-
                     var context = new CompileContext(compilationModules);
                     context.Before(new BeforeCompileContext
                     {
                         Arguments = CscArgs,
                         Compilation = compilation.AddSyntaxTrees(GeneratedSyntaxTrees()),
                         Diagnostics = Diagnostics,
-                        Resources = CscArgs.ManifestResources,
                     });
-                    EmitResult emitResult = null;
+
+                    CscArgs = context.BeforeCompileContext.Arguments;
+                    compilation = context.BeforeCompileContext.Compilation;
+
+                    var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
+                    if (!analyzers.IsEmpty)
+                    {
+                        compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, analysisCts.Token);
+                        compilation = compilationWithAnalyzers.Compilation as CSharpCompilation;
+                    }
+                    var analysisTask = compilationWithAnalyzers?.GetAnalysisResultAsync(analysisCts.Token);
+
+                    using (var win32Resources = CreateWin32Resource(compilation))
+                    {
+                        // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
+                        emitResult = compilation.Emit(
+                            peStream: peStream,
+                            pdbStream: pdbStream,
+                            xmlDocumentationStream: xmlDocumentationStream,
+                            win32Resources: win32Resources,
+                            manifestResources: CscArgs.ManifestResources,
+                            options: CscArgs.EmitOptions,
+                            sourceLinkStream: TryOpenFile(CscArgs.SourceLink, out var sourceLinkStream) ? sourceLinkStream : null,
+                            embeddedTexts: CscArgs.EmbeddedFiles.AsEnumerable()
+                                .Select(x => TryOpenFile(x.Path, out var embeddedText) ? EmbeddedText.FromStream(x.Path, embeddedText) : null)
+                                .Where(x => x != null),
+                            debugEntryPoint: null);
+                    }
+                    analysisCts.Cancel();
+
+                    Diagnostics.AddRange(emitResult.Diagnostics);
+
                     try
                     {
-                        emitResult = await Emit(context);
+                        var analysisResult = analysisTask == null ? null : await analysisTask;
+                        if (analysisResult != null)
+                        {
+                            Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
+
+                            foreach (var info in analysisResult.AnalyzerTelemetryInfo)
+                            {
+                                Console.WriteLine($"hidden: {info.Key} {info.Value.ExecutionTime.TotalMilliseconds:#}ms");
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Console.WriteLine("warning: analysis canceled");
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("error: emit failed: " + ex.Message);
+                        Console.WriteLine("error: analysis failed: " + ex.Message);
                         return false;
                     }
-                    finally
+
+                    if (!emitResult.Success || HasErrors)
                     {
-                        analysisCts.Cancel();
+                        return false;
                     }
 
-                    var analysisResult = await analysisTask;
-                    if (analysisResult != null)
+                    context.After(new AfterCompileContext
                     {
-                        Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
+                        Arguments = CscArgs,
+                        AssemblyStream = peStream,
+                        Compilation = compilation,
+                        Diagnostics = Diagnostics,
+                        SymbolStream = pdbStream,
+                        XmlDocStream = xmlDocumentationStream,
+                    });
 
-                        foreach (var info in analysisResult.AnalyzerTelemetryInfo)
-                        {
-                            Console.WriteLine("info: " + info.Value.ToString());
-                        }
+                    if (!HasErrors)
+                    {
+                        // do not create the output files if emit fails
+                        // if the output files are there, msbuild incremental build thinks the previous build succeeded
+                        await Task.WhenAll(
+                            DumpToFileAsync(outputPath, peStream),
+                            DumpToFileAsync(pdbPath, pdbStream),
+                            DumpToFileAsync(CscArgs.DocumentationPath, xmlDocumentationStream));
+                        return true;
                     }
 
-                    return emitResult.Success;
+                    return false;
                 }
             }
             catch (Exception ex)
@@ -166,6 +211,8 @@ namespace StackExchange.Precompilation
                 Diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
             }
         }
+
+        private bool HasErrors => Diagnostics.Any(x => !x.IsSuppressed && x.Severity == DiagnosticSeverity.Error);
 
         private const string WorkspaceKind = nameof(StackExchange) + "." + nameof(StackExchange.Precompilation);
 
@@ -300,66 +347,6 @@ namespace StackExchange.Precompilation
             using (var manifestStream = compilation.Options.OutputKind != OutputKind.NetModule && TryOpenFile(CscArgs.Win32Manifest, out var manifest) ? manifest : null)
             using (var iconStream = TryOpenFile(CscArgs.Win32Icon, out var icon) ? icon : null)
                 return compilation.CreateDefaultWin32Resources(true, CscArgs.NoWin32Manifest, manifestStream, iconStream);
-        }
-
-        private async Task<EmitResult> Emit(CompileContext context)
-        {
-            var compilation = context.BeforeCompileContext.Compilation;
-            var pdbPath = CscArgs.PdbPath;
-            var outputPath = Path.Combine(CscArgs.OutputDirectory, CscArgs.OutputFileName);
-
-            if (!CscArgs.EmitPdb)
-            {
-                pdbPath = null;
-            }
-            else if (string.IsNullOrWhiteSpace(pdbPath))
-            {
-                pdbPath = Path.ChangeExtension(outputPath, ".pdb");
-            }
-
-            using (var peStream = new MemoryStream())
-            using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? new MemoryStream() : null)
-            using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
-            using (var win32Resources = CreateWin32Resource(compilation))
-            {
-                // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
-                var emitResult = compilation.Emit(
-                    peStream: peStream,
-                    pdbStream: pdbStream,
-                    xmlDocumentationStream: xmlDocumentationStream,
-                    win32Resources: win32Resources,
-                    manifestResources: CscArgs.ManifestResources,
-                    options: CscArgs.EmitOptions,
-                    sourceLinkStream: TryOpenFile(CscArgs.SourceLink, out var sourceLinkStream) ? sourceLinkStream : null,
-                    embeddedTexts: CscArgs.EmbeddedFiles.AsEnumerable()
-                        .Select(x => TryOpenFile(x.Path, out var embeddedText) ? EmbeddedText.FromStream(x.Path, embeddedText) : null)
-                        .Where(x => x != null),
-                    debugEntryPoint: null);
-
-                Diagnostics.AddRange(emitResult.Diagnostics);
-
-                context.After(new AfterCompileContext
-                {
-                    Arguments = CscArgs,
-                    AssemblyStream = peStream,
-                    Compilation = compilation,
-                    Diagnostics = Diagnostics,
-                    SymbolStream = pdbStream,
-                    XmlDocStream = xmlDocumentationStream,
-                });
-
-                // do not create the output files if emit fails
-                // if the output files are there, msbuild incremental build thinks the previous build succeeded
-                if (emitResult.Success)
-                {
-                    await Task.WhenAll(
-                        DumpToFileAsync(outputPath, peStream),
-                        DumpToFileAsync(pdbPath, pdbStream),
-                        DumpToFileAsync(CscArgs.DocumentationPath, xmlDocumentationStream));
-                }
-
-                return emitResult;
-            }
         }
 
         private static async Task DumpToFileAsync(string path, MemoryStream stream)

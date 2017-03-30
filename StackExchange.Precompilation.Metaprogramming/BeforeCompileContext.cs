@@ -10,8 +10,6 @@ namespace StackExchange.Precompilation
 
         public CSharpCompilation Compilation { get; set; }
 
-        public IList<ResourceDescription> Resources { get; set; }
-
-        public IList<Diagnostic> Diagnostics { get; set; }
+        public IList<Diagnostic> Diagnostics { get; internal set; }
     }
 }
