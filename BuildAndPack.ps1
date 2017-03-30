@@ -27,6 +27,11 @@ if(-not $GitCommitId)
 
 msbuild /m /p:Configuration=Release /v:q /nologo "/p:GitCommitId=$GitCommitId" "/p:PdbGitEnabled=true;PdbGitSkipVerify=true;PdbGitGitRemoteUrl=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation"
 
+if ($LASTEXITCODE -ne 0)
+{
+    exit $LASTEXITCODE
+}
+
 new-item tools -type directory -force -ea stop
 get-childitem -file -recurse -include ("StackExchange.Precompiler.*") |
      where { $_.Directory -match "bin\\Release" -and $_.FullName -notmatch "Test" } |
@@ -36,6 +41,10 @@ get-childitem -file -recurse -include ("StackExchange.Precompiler.*") |
 
 # make sure we can compile with the assemblies from the tools dir
 msbuild /m /t:Rebuild /p:Configuration=Release /p:SECompilerPath=..\tools /v:q /nologo
+if ($LASTEXITCODE -ne 0)
+{
+    exit $LASTEXITCODE
+}
 
 new-item .\packages\obj -type directory -force | out-null
 get-childitem *.nuspec -Recurse | 
