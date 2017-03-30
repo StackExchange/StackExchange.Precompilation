@@ -83,14 +83,14 @@ namespace StackExchange.Precompilation
                 using (var analysisCts = new CancellationTokenSource())
                 {
                     var project = CreateProject(workspace);
-                    var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray(), analysisCts.Token);
+                    var analyzerLoader = Task.Run(() => project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray());
                     var compilation = await project.GetCompilationAsync() as CSharpCompilation;
 
                     var analysisTask = Task.Run(async () => {
                         var analyzers = await analyzerLoader;
                         if (analyzers.IsEmpty) return null;
                         return await compilation.WithAnalyzers(analyzers, project.AnalyzerOptions).GetAnalysisResultAsync(analysisCts.Token);
-                    }, analysisCts.Token);
+                    });
 
                     var context = new CompileContext(compilationModules);
                     context.Before(new BeforeCompileContext
@@ -103,15 +103,18 @@ namespace StackExchange.Precompilation
 
                     var emitResult = await Emit(context);
 
-                    analysisCts.Cancel();
                     try
                     {
+                        analysisCts.Cancel();
                         var analysisResult = await analysisTask;
-                        Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
-
-                        foreach (var info in analysisResult.AnalyzerTelemetryInfo)
+                        if (analysisResult != null)
                         {
-                            Console.WriteLine("info: " + info.Value.ToString());
+                            Diagnostics.AddRange(analysisResult.GetAllDiagnostics());
+
+                            foreach (var info in analysisResult.AnalyzerTelemetryInfo)
+                            {
+                                Console.WriteLine("info: " + info.Value.ToString());
+                            }
                         }
                     }
                     catch (OperationCanceledException)
