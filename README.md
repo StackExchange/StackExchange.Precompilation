@@ -45,4 +45,4 @@ if you have an existing project with StackExchange.Precompilation packages and e
 - after that you can update the packages StackExchange.Precompilation in your target project from the packages\obj source
 - this gives you local *-local{timestamp} suffixed packages instead of the *-alpha{build} ones produced by the CI build
 - PROTIP: if you want to attach an debugger to the compilation of your project or any of the Test.* projects, add a `System.Diagnostics.Debugger.Launch()` statement somewhere in the code ;)
-- CI *-alpha{build} packages are available via an appveyor nuget feed https://ci.appveyor.com/nuget/stackexchange-precompilation-3a7g2fa6704m
+- CI *-alpha{build} packages are available on the stackoverflow myget feed https://www.myget.org/F/stackoverflow/api/v2
