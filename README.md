@@ -18,7 +18,7 @@ Replacing aspnet_compiler.exe for .cshtml precompilation
 
 - [Add the PrecompiledViewEngine to ViewEngines](https://github.com/StackExchange/StackExchange.Precompilation/blob/fd536b764983e2674a4549b7be6f26e971190c1e/Test.WebApp/Global.asax.cs#L29)
 
-#### Using C# 6 in ASP.NET MVC 5
+#### Using C# 7 in ASP.NET MVC 5
 
 - [Add the RoslynRazorViewEngine to ViewEngines](https://github.com/StackExchange/StackExchange.Precompilation/blob/fd536b764983e2674a4549b7be6f26e971190c1e/Test.WebApp/Global.asax.cs#L32)
 
