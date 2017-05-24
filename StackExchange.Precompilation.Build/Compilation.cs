@@ -145,7 +145,6 @@ namespace StackExchange.Precompilation
                                 .Where(x => x != null),
                             debugEntryPoint: null);
                     }
-                    analysisCts.Cancel();
 
                     Diagnostics.AddRange(emitResult.Diagnostics);
 
