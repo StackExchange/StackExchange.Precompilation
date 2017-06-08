@@ -209,8 +209,14 @@ namespace StackExchange.Precompilation
         private static readonly ConcurrentDictionary<string, Lazy<MetadataReference>> ReferenceCache = new ConcurrentDictionary<string, Lazy<MetadataReference>>();
         private static readonly Func<Assembly, MetadataReference> ResolveReference = assembly =>
         {
+            var key = assembly.Location;
+            Uri uri;
+            if (Uri.TryCreate(assembly.CodeBase, UriKind.Absolute, out uri) && uri.IsFile)
+            {
+                key = uri.LocalPath;
+            }
             return ReferenceCache.GetOrAdd(
-                assembly.Location,
+                key,
                 loc => new Lazy<MetadataReference>(
                     () => MetadataReference.CreateFromFile(loc),
                     LazyThreadSafetyMode.ExecutionAndPublication)).Value;
