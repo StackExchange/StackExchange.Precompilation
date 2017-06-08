@@ -11,6 +11,13 @@ namespace Test.WebApp
 {
     public class MvcApplication : HttpApplication
     {
+        public static bool IsDebug =>
+#if DEBUG
+                true;
+#else
+                false;
+#endif
+
         protected void Application_Start()
         {
             AreaRegistration.RegisterAllAreas();

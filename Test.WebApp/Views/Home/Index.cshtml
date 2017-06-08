@@ -13,4 +13,16 @@ Precompiled View Paths:
 @Html.EditorForModel()
 @Html.Partial("../Other/../Other/RelativePartial")
 @Helpers.Test()
-@Html.Partial("ExternalPartial")
+
+@if (!MvcApplication.IsDebug)
+{
+    @Html.Partial("ExternalPartial");
+}
+
+@{
+    // c# 7 features
+
+
+    (string title, string url) GetTitle() => ("ValueTuple", "`2");
+    @GetTitle().Item1
+}
