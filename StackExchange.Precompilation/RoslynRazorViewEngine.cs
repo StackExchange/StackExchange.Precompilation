@@ -71,10 +71,6 @@ namespace StackExchange.Precompilation
         protected override IView CreateView(ControllerContext controllerContext, string viewPath, string masterPath) =>
             new RoslynRazorView(this, controllerContext, viewPath, GetTypeFromVirtualPath(viewPath), true, masterPath);
 
-        // using reflection to get a mis-spelled internal property setter... what could possibly go wrong?
-        private static readonly MethodInfo WebViewPage_OverridenLayoutPathSetter = typeof (WebViewPage)
-            .GetProperty("OverridenLayoutPath", BindingFlags.Instance | BindingFlags.NonPublic)
-            .SetMethod;
 
         private class RoslynRazorView : IView, IVirtualPathFactory
         {
@@ -113,7 +109,7 @@ namespace StackExchange.Precompilation
                 {
                     if (!string.IsNullOrEmpty(_overridenLayoutPath))
                     {
-                        WebViewPage_OverridenLayoutPathSetter.Invoke(webViewPage, new object[] {_overridenLayoutPath});
+                        Hacks.SetOverriddenLayoutPath(webViewPage, _overridenLayoutPath);
                     }
                     webViewPage.ViewContext = viewContext;
                     webViewPage.ViewData = viewContext.ViewData;
@@ -207,7 +203,7 @@ namespace StackExchange.Precompilation
         // we were getting OutOfMemory exceptions caused by MetadataReference.CreateFrom* creating 
         // System.Reflection.PortableExecutable.PEReader instances for the same assembly for each view being compiled
         private static readonly ConcurrentDictionary<string, Lazy<MetadataReference>> ReferenceCache = new ConcurrentDictionary<string, Lazy<MetadataReference>>();
-        private static readonly Func<Assembly, MetadataReference> ResolveReference = assembly =>
+        internal static MetadataReference ResolveReference(Assembly assembly)
         {
             var key = assembly.Location;
             Uri uri;
@@ -220,7 +216,7 @@ namespace StackExchange.Precompilation
                 loc => new Lazy<MetadataReference>(
                     () => MetadataReference.CreateFromFile(loc),
                     LazyThreadSafetyMode.ExecutionAndPublication)).Value;
-        };
+        }
 
         private static Assembly CompileToAssembly(WebPageRazorHost host, SyntaxTree syntaxTree)
         {
@@ -232,6 +228,8 @@ namespace StackExchange.Precompilation
                     outputKind: OutputKind.DynamicallyLinkedLibrary,
                     assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default,
                     optimizationLevel: host.DefaultDebugCompilation ? OptimizationLevel.Debug : OptimizationLevel.Release));
+
+            compilation = Hacks.MakeValueTuplesWorkWhenRunningOn47RuntimeAndTargetingNet45Plus(compilation);
 
             using (var dllStream = new MemoryStream())
             using (var pdbStream = new MemoryStream())

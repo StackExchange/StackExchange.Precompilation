@@ -49,25 +49,6 @@ namespace StackExchange.Precompilation
 
         private class PrecompiledView : IView
         {
-            private static readonly Action<WebViewPage, string> LayoutSetter;
-
-            static PrecompiledView()
-            {
-                var property = typeof(WebViewPage).GetProperty("OverridenLayoutPath", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                if (property == null)
-                {
-                    throw new Exception("Couldn't generate LayoutSetter, no OverridenLayoutPath property");
-                }
-
-                var setter = property.GetSetMethod(nonPublic: true);
-                if (setter == null)
-                {
-                    throw new Exception("Couldn't generate LayoutSetter, no OverridenLayoutPath setter");
-                }
-
-                LayoutSetter = (Action<WebViewPage, string>)Delegate.CreateDelegate(typeof(Action<WebViewPage, string>), setter, throwOnBindFailure: true);
-            }
-
             private readonly string Path;
             private readonly string MasterPath;
             private readonly Type Compiled;
@@ -102,7 +83,7 @@ namespace StackExchange.Precompilation
                 {
                     if (!string.IsNullOrEmpty(MasterPath))
                     {
-                        LayoutSetter(viewPage, MasterPath);
+                        Hacks.SetOverriddenLayoutPath(viewPage, MasterPath);
                     }
 
                     viewPage.ViewContext = viewContext;
