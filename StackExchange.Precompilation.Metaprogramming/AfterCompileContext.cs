@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace StackExchange.Precompilation
 {
-    public class AfterCompileContext
+    public class AfterCompileContext : ICompileContext
     {
         public CSharpCommandLineArguments Arguments { get; internal set; }
 
