@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace StackExchange.Precompilation
 {
-    public class BeforeCompileContext
+    public class BeforeCompileContext : ICompileContext
     {
         public CSharpCommandLineArguments Arguments { get; set; }
 

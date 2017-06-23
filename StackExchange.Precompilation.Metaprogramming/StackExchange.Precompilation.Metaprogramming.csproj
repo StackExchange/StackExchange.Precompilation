@@ -149,6 +149,7 @@
     <Compile Include="CompileModulesCollection.cs" />
     <Compile Include="AfterCompileContext.cs" />
     <Compile Include="BeforeCompileContext.cs" />
+    <Compile Include="ICompileContext.cs" />
     <Compile Include="ICompileModule.cs" />
     <Compile Include="AppDomainHelper.cs" />
     <Compile Include="IMetadataReference.cs" />
