@@ -26,7 +26,7 @@ nuget:
 build_script:
 - ps: .\BuildAndPack.ps1 -VersionSuffix "$env:package_suffix" -GitCommitId "$env:appveyor_repo_commit" -MsBuildArgs @(, "/logger:C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll")
 skip_branch_with_pr: true
-skip_tags: true
+skip_tags: false
 skip_commits:
   files:
     - '**/*.md'
