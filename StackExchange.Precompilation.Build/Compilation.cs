@@ -110,6 +110,14 @@ namespace StackExchange.Precompilation
                         return false;
                     }
 
+
+                    var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
+                    if (!analyzers.IsEmpty)
+                    {
+                        compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, analysisCts.Token);
+                        compilation = compilationWithAnalyzers.Compilation as CSharpCompilation;
+                    }
+
                     var context = new CompileContext(compilationModules);
                     context.Before(new BeforeCompileContext
                     {
@@ -121,12 +129,6 @@ namespace StackExchange.Precompilation
                     CscArgs = context.BeforeCompileContext.Arguments;
                     compilation = context.BeforeCompileContext.Compilation;
 
-                    var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
-                    if (!analyzers.IsEmpty)
-                    {
-                        compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, analysisCts.Token);
-                        compilation = compilationWithAnalyzers.Compilation as CSharpCompilation;
-                    }
                     var analysisTask = compilationWithAnalyzers?.GetAnalysisResultAsync(analysisCts.Token);
 
                     using (var win32Resources = CreateWin32Resource(compilation))
