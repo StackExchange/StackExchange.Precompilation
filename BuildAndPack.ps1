@@ -2,9 +2,10 @@ param(
     [parameter(Position=0)]
     [string] $VersionSuffix,
     [parameter(Position=1)]
-    [string] $GitCommitId,    
+    [string] $GitCommitId,
     [parameter(Position=2)]
-    [string[]] $MsBuildArgs
+    [string[]] $MsBuildArgs,
+    [switch] $CIBuild
 )
 
 if (-not $semver)
@@ -12,7 +13,7 @@ if (-not $semver)
     set-variable -name semver -scope global -value (get-content .\semver.txt)
 }
 
-if ($VersionSuffix)
+if ($VersionSuffix -or $CIBuild)
 {
     $version = "$semver$VersionSuffix"
 }
