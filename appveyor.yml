@@ -16,9 +16,8 @@ install:
     set -name semver -scope global -value (get-content .\semver.txt)
 
     $env:semver = $semver
-
-    $env:package_suffix = "-alpha$env:appveyor_build_number"
-
+    if ("$env:appveyor_repo_tag_name" -ne "releases/$semver") {
+      $env:package_suffix = "-alpha$env:appveyor_build_number" }
     update-appveyorbuild -Version "$env:semver$env:package_suffix"
 nuget:
   disable_publish_on_pr: true
