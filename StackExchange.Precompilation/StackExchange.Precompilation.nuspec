@@ -14,13 +14,10 @@
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.2.0" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.3.1" />
     </dependencies>
-    <releaseNotes>Version 4.0.0
-* updated roslyn packages to 2.1.0
-* support for analyzers
-* various bug fixes
-* requires net462
+    <releaseNotes>Version 4.1.0
+* updated roslyn packages to 2.3.1
     </releaseNotes>
   </metadata>
   <files>
