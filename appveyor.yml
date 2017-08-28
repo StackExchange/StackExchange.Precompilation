@@ -34,13 +34,15 @@ artifacts:
 - path: packages/obj/*.nupkg
 deploy:
 - provider: NuGet
+  name: Alpha
   server: https://www.myget.org/F/stackoverflow/api/v2
   on:
-    branch: master  
+    branch: master
   api_key:
     secure: P/UHxq2DEs0GI1SoDXDesHjRVsSVgdywz5vmsnhFQQY5aJgO3kP+QfhwfhXz19Rw
   symbol_server: https://www.myget.org/F/stackoverflow/symbols/api/v2/package
 - provider: NuGet
+  name: Release
   server: https://www.myget.org/F/stackoverflow/api/v2
   on:
     appveyor_repo_tag: true
