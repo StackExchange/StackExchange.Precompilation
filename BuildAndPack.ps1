@@ -28,17 +28,16 @@ if(-not $GitCommitId)
     $GitCommitId = $(git rev-parse HEAD)
 }
 
-$defaultArgs = "/v:q", "/m", "/nologo", "/p:SolutionDir=$((Resolve-Path .))\", "/t:Build", "/p:Configuration=Release"
+$solutionDir = "$((Resolve-Path .).Path)\"
+$defaultArgs = "/v:q", "/m", "/nologo", "/p:SolutionDir=$solutionDir", "/t:Build", "/p:Configuration=Release"
 if ($MsBuildArgs)
 {
     $defaultArgs += $MsBuildArgs
 }
 
-
 $buildArgs =
     ".\StackExchange.Precompilation.Tests\StackExchange.Precompilation.Tests.csproj",
-    "/p:GitCommitId=$GitCommitId",
-    "/p:PdbGitEnabled=true;PdbGitSkipVerify=true;PdbGitGitRemoteUrl=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation"
+	 "/p:PathMap=$solutionDir=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation/$GitCommitId/"
 & "msbuild" $($buildArgs + $defaultArgs)
 
 if ($LASTEXITCODE -ne 0)
