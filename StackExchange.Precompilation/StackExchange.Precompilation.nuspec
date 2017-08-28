@@ -18,6 +18,8 @@
     </dependencies>
     <releaseNotes>Version 4.1.0
 * updated roslyn packages to 2.3.1
+* don't emit pdb files when debugtype embedded
+* pathmap support
     </releaseNotes>
   </metadata>
   <files>
