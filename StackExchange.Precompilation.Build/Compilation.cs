@@ -93,7 +93,7 @@ namespace StackExchange.Precompilation
                 using (var workspace = CreateWokspace())
                 using (var analysisCts = new CancellationTokenSource())
                 using (var peStream = new MemoryStream())
-                using (var pdbStream = !string.IsNullOrWhiteSpace(pdbPath) ? new MemoryStream() : null)
+                using (var pdbStream = CscArgs.EmitPdb && CscArgs.EmitOptions.DebugInformationFormat != DebugInformationFormat.Embedded ? new MemoryStream() : null)
                 using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
                 {
                     EmitResult emitResult = null;
