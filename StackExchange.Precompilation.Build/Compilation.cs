@@ -78,17 +78,8 @@ namespace StackExchange.Precompilation
                 }
                 Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
 
-                var pdbPath = CscArgs.PdbPath;
                 var outputPath = Path.Combine(CscArgs.OutputDirectory, CscArgs.OutputFileName);
-
-                if (!CscArgs.EmitPdb)
-                {
-                    pdbPath = null;
-                }
-                else if (string.IsNullOrWhiteSpace(pdbPath))
-                {
-                    pdbPath = Path.ChangeExtension(outputPath, ".pdb");
-                }
+                var pdbPath = CscArgs.PdbPath ?? Path.ChangeExtension(outputPath, ".pdb");
 
                 using (var workspace = CreateWokspace())
                 using (var analysisCts = new CancellationTokenSource())
@@ -133,6 +124,12 @@ namespace StackExchange.Precompilation
 
                     using (var win32Resources = CreateWin32Resource(compilation))
                     {
+                        // PathMapping is also required here, to actually get the symbols to line up:
+                        // https://github.com/dotnet/roslyn/blob/9d081e899b35294b8f1793d31abe5e2c43698844/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L616
+                        // PathUtilities.NormalizePathPrefix is internal, but callable via the SourceFileResolver, that we set in CreateProject
+                        var emitOptions = CscArgs.EmitOptions
+                            .WithPdbFilePath(compilation.Options.SourceReferenceResolver.NormalizePath(pdbPath, CscArgs.BaseDirectory));
+
                         // https://github.com/dotnet/roslyn/blob/41950e21da3ac2c307fb46c2ca8c8509b5059909/src/Compilers/Core/Portable/CommandLine/CommonCompiler.cs#L437
                         emitResult = compilation.Emit(
                             peStream: peStream,
@@ -140,7 +137,7 @@ namespace StackExchange.Precompilation
                             xmlDocumentationStream: xmlDocumentationStream,
                             win32Resources: win32Resources,
                             manifestResources: CscArgs.ManifestResources,
-                            options: CscArgs.EmitOptions,
+                            options: emitOptions,
                             sourceLinkStream: TryOpenFile(CscArgs.SourceLink, out var sourceLinkStream) ? sourceLinkStream : null,
                             embeddedTexts: CscArgs.EmbeddedFiles.AsEnumerable()
                                 .Select(x => TryOpenFile(x.Path, out var embeddedText) ? EmbeddedText.FromStream(x.Path, embeddedText) : null)
@@ -279,12 +276,17 @@ namespace StackExchange.Precompilation
             var projectInfo = CommandLineProject.CreateProjectInfo(CscArgs.OutputFileName, "C#", Environment.CommandLine, _precompilationCommandLineArgs.BaseDirectory, workspace);
 
             projectInfo = projectInfo
+                .WithCompilationOptions(CscArgs.CompilationOptions
+                    .WithSourceReferenceResolver(new SourceFileResolver(CscArgs.SourcePaths, CscArgs.BaseDirectory, CscArgs.PathMap))) // required for path mapping support
                 .WithDocuments(
                     projectInfo
                         .Documents
                         .Select(d => Path.GetExtension(d.FilePath) == ".cshtml"
                             ? d.WithTextLoader(new RazorParser(this, d.TextLoader, workspace))
                             : d));
+
+            //projectInfprojectInfo.WithCompilationOptions(CscArgs.CompilationOptions.WithSourceReferenceResolver(new SourceFileResolver(CscArgs.SourcePaths, CscArgs.BaseDirectory, CscArgs.PathMap)));
+            //Console.WriteLine(projectInfo.CompilationOptions.SourceReferenceResolver.NormalizePath());
 
             return workspace.AddProject(projectInfo);
         }

@@ -163,6 +163,7 @@
   -->
   <PropertyGroup>
     <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\</SEPrecompilerPath>
+    <PathMap>$(SolutionDir)\=https://example.org/</PathMap>
   </PropertyGroup>
   <Import Project="$(SolutionDir)StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
