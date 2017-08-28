@@ -2,6 +2,7 @@ using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using StackExchange.Precompilation;
+using Test.WebApp.Controllers;
 
 namespace Test.WebApp
 {
