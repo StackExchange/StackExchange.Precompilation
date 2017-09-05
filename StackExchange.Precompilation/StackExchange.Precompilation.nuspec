@@ -14,9 +14,12 @@
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.3.1" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.3.2" />
     </dependencies>
-    <releaseNotes>Version 4.1.0
+    <releaseNotes>Version 4.1.1
+* updaed roslyn packages to 2.3.2
+
+Version 4.1.0
 * updated roslyn packages to 2.3.1
 * don't emit pdb files when debugtype embedded
 * pathmap support
