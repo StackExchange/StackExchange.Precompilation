@@ -76,7 +76,7 @@ namespace StackExchange.Precompilation
                 {
                     return false;
                 }
-                Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom                
+                Encoding = CscArgs.Encoding ?? new UTF8Encoding(false); // utf8 without bom
 
                 var outputPath = Path.Combine(CscArgs.OutputDirectory, CscArgs.OutputFileName);
                 var pdbPath = CscArgs.PdbPath ?? Path.ChangeExtension(outputPath, ".pdb");
@@ -86,21 +86,22 @@ namespace StackExchange.Precompilation
                 using (var peStream = new MemoryStream())
                 using (var pdbStream = CscArgs.EmitPdb && CscArgs.EmitOptions.DebugInformationFormat != DebugInformationFormat.Embedded ? new MemoryStream() : null)
                 using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
+                using (var razorParser = CreateRazorParser(workspace))
                 {
                     EmitResult emitResult = null;
-                    var project = CreateProject(workspace);
+                    var project = CreateProject(workspace, razorParser);
                     CSharpCompilation compilation = null;
                     CompilationWithAnalyzers compilationWithAnalyzers = null;
                     try
                     {
                         compilation = await project.GetCompilationAsync() as CSharpCompilation;
+                        await razorParser.Complete();
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine("error: failed to create compilation: " + ex.Message);
                         return false;
                     }
-
 
                     var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
                     if (!analyzers.IsEmpty)
@@ -220,7 +221,7 @@ namespace StackExchange.Precompilation
         {
             private readonly IAnalyzerAssemblyLoader _loader = new CompilationAnalyzerAssemblyLoader();
 
-            public IAnalyzerAssemblyLoader GetLoader() => _loader; 
+            public IAnalyzerAssemblyLoader GetLoader() => _loader;
         }
 
         private class CompilationAnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
@@ -271,7 +272,7 @@ namespace StackExchange.Precompilation
             return workspace;
         }
 
-        private Project CreateProject(AdhocWorkspace workspace)
+        private Project CreateProject(AdhocWorkspace workspace, RazorParser razorParser)
         {
             var projectInfo = CommandLineProject.CreateProjectInfo(CscArgs.OutputFileName, "C#", Environment.CommandLine, _precompilationCommandLineArgs.BaseDirectory, workspace);
 
@@ -282,7 +283,7 @@ namespace StackExchange.Precompilation
                     projectInfo
                         .Documents
                         .Select(d => Path.GetExtension(d.FilePath) == ".cshtml"
-                            ? d.WithTextLoader(new RazorParser(this, d.TextLoader, workspace))
+                            ? razorParser.Wrap(d)
                             : d));
 
             //projectInfprojectInfo.WithCompilationOptions(CscArgs.CompilationOptions.WithSourceReferenceResolver(new SourceFileResolver(CscArgs.SourcePaths, CscArgs.BaseDirectory, CscArgs.PathMap)));
@@ -318,6 +319,12 @@ namespace StackExchange.Precompilation
                 }
             }
         }
+
+        private RazorParser CreateRazorParser(Workspace workspace) =>
+            PrecompilerSection.Current?.RazorCache?.Directory is var dir &&
+            string.IsNullOrWhiteSpace(dir)
+                ? new RazorParser(workspace, this)
+                : new RazorParser(workspace, this, Directory.CreateDirectory(Path.Combine(CscArgs.OutputDirectory, dir)));
 
         private bool TryOpenFile(string path, out Stream stream)
         {

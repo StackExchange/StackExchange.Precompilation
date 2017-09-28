@@ -16,8 +16,12 @@
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
       <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.3.2" />
     </dependencies>
-    <releaseNotes>Version 4.1.1
-* updaed roslyn packages to 2.3.2
+    <releaseNotes>Version 4.4
+* added configurable support for caching the razor (.cshtml -> .cs) generation step
+* added optional razorCache element to the precompilation configuration section
+
+Version 4.1.1
+* updated roslyn packages to 2.3.2
 
 Version 4.1.0
 * updated roslyn packages to 2.3.1
