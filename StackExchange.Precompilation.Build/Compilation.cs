@@ -413,7 +413,7 @@ namespace StackExchange.Precompilation
 
         private IEnumerable<SyntaxTree> GeneratedSyntaxTrees()
         {
-            yield return SyntaxFactory.ParseSyntaxTree($"[assembly: {typeof(CompiledFromDirectoryAttribute).FullName}(@\"{CurrentDirectory.FullName}\")]");
+            yield return SyntaxFactory.ParseSyntaxTree($"[assembly: {typeof(CompiledFromDirectoryAttribute).FullName}(@\"{CurrentDirectory.FullName}\")]", CscArgs.ParseOptions);
         }
 
         public Location AsLocation(string path)
