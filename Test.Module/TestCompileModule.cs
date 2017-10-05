@@ -32,7 +32,7 @@ namespace Test.Module
         }
     }
 }
-"));
+", context.Arguments.ParseOptions));
         }
 
         public void AfterCompile(AfterCompileContext context)
