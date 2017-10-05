@@ -26,12 +26,12 @@ namespace StackExchange.Precompilation
                     agg = agg.Flatten();
                     foreach (var inner in agg.InnerExceptions)
                     {
-                        Console.Error.WriteLine(inner);
+                        Console.Error.WriteLine("error: " + inner);
                     }
                 }
                 else
                 {
-                    Console.Error.WriteLine(ex);
+                    Console.Error.WriteLine("error: " + ex);
                 }
                 Environment.ExitCode = 2;
             }

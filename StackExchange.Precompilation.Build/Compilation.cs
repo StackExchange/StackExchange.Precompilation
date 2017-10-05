@@ -58,7 +58,7 @@ namespace StackExchange.Precompilation
             AppDomain.CurrentDomain.SetData(".appVPath", "/");
         }
 
-        public async Task<bool> RunAsync()
+        public async Task<bool> RunAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             try
             {
@@ -82,11 +82,10 @@ namespace StackExchange.Precompilation
                 var pdbPath = CscArgs.PdbPath ?? Path.ChangeExtension(outputPath, ".pdb");
 
                 using (var workspace = CreateWokspace())
-                using (var analysisCts = new CancellationTokenSource())
                 using (var peStream = new MemoryStream())
                 using (var pdbStream = CscArgs.EmitPdb && CscArgs.EmitOptions.DebugInformationFormat != DebugInformationFormat.Embedded ? new MemoryStream() : null)
                 using (var xmlDocumentationStream = !string.IsNullOrWhiteSpace(CscArgs.DocumentationPath) ? new MemoryStream() : null)
-                using (var razorParser = CreateRazorParser(workspace))
+                using (var razorParser = CreateRazorParser(workspace, cancellationToken))
                 {
                     EmitResult emitResult = null;
                     var project = CreateProject(workspace, razorParser);
@@ -94,7 +93,7 @@ namespace StackExchange.Precompilation
                     CompilationWithAnalyzers compilationWithAnalyzers = null;
                     try
                     {
-                        compilation = await project.GetCompilationAsync() as CSharpCompilation;
+                        compilation = await project.GetCompilationAsync(cancellationToken) as CSharpCompilation;
                         await razorParser.Complete();
                     }
                     catch (Exception ex)
@@ -106,7 +105,7 @@ namespace StackExchange.Precompilation
                     var analyzers = project.AnalyzerReferences.SelectMany(x => x.GetAnalyzers(project.Language)).ToImmutableArray();
                     if (!analyzers.IsEmpty)
                     {
-                        compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, analysisCts.Token);
+                        compilationWithAnalyzers = compilation.WithAnalyzers(analyzers, project.AnalyzerOptions, cancellationToken);
                         compilation = compilationWithAnalyzers.Compilation as CSharpCompilation;
                     }
 
@@ -121,7 +120,7 @@ namespace StackExchange.Precompilation
                     CscArgs = context.BeforeCompileContext.Arguments;
                     compilation = context.BeforeCompileContext.Compilation;
 
-                    var analysisTask = compilationWithAnalyzers?.GetAnalysisResultAsync(analysisCts.Token);
+                    var analysisTask = compilationWithAnalyzers?.GetAnalysisResultAsync(cancellationToken);
 
                     using (var win32Resources = CreateWin32Resource(compilation))
                     {
@@ -191,9 +190,9 @@ namespace StackExchange.Precompilation
                         // do not create the output files if emit fails
                         // if the output files are there, msbuild incremental build thinks the previous build succeeded
                         await Task.WhenAll(
-                            DumpToFileAsync(outputPath, peStream),
-                            DumpToFileAsync(pdbPath, pdbStream),
-                            DumpToFileAsync(CscArgs.DocumentationPath, xmlDocumentationStream));
+                            DumpToFileAsync(outputPath, peStream, cancellationToken),
+                            DumpToFileAsync(pdbPath, pdbStream, cancellationToken),
+                            DumpToFileAsync(CscArgs.DocumentationPath, xmlDocumentationStream, cancellationToken));
                         return true;
                     }
 
@@ -320,11 +319,11 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private RazorParser CreateRazorParser(Workspace workspace) =>
+        private RazorParser CreateRazorParser(Workspace workspace, CancellationToken cancellationToken) =>
             PrecompilerSection.Current?.RazorCache?.Directory is var dir &&
             string.IsNullOrWhiteSpace(dir)
-                ? new RazorParser(workspace, this)
-                : new RazorParser(workspace, this, Directory.CreateDirectory(Path.Combine(CscArgs.OutputDirectory, dir)));
+                ? new RazorParser(workspace, cancellationToken, this)
+                : new RazorParser(workspace, cancellationToken, this, Directory.CreateDirectory(Path.Combine(CscArgs.OutputDirectory, dir)));
 
         private bool TryOpenFile(string path, out Stream stream)
         {
@@ -359,14 +358,15 @@ namespace StackExchange.Precompilation
                 return compilation.CreateDefaultWin32Resources(true, CscArgs.NoWin32Manifest, manifestStream, iconStream);
         }
 
-        private static async Task DumpToFileAsync(string path, MemoryStream stream)
+        private static async Task DumpToFileAsync(string path, MemoryStream stream, CancellationToken cancellationToken)
         {
             if (stream?.Length > 0)
             {
                 stream.Position = 0;
                 using (var file = File.Create(path))
+                using (cancellationToken.Register(() => { try { File.Delete(path); } catch { } }))
                 {
-                    await stream.CopyToAsync(file);
+                    await stream.CopyToAsync(file, 4096, cancellationToken);
                 }
             }
         }

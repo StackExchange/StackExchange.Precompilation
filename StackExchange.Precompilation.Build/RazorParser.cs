@@ -26,9 +26,10 @@ namespace StackExchange.Precompilation
         private readonly Func<TextAndVersion, Stream> _worker;
         private readonly BlockingCollection<RazorTextLoader> _workItems;
         private readonly Lazy<Task> _backgroundWorkers;
+        private readonly CancellationToken _cancellationToken;
 
-        public RazorParser(Workspace workspace, Compilation compilation, DirectoryInfo cacheDirectory)
-            : this (workspace, compilation)
+        public RazorParser(Workspace workspace, CancellationToken cancellationToken, Compilation compilation, DirectoryInfo cacheDirectory)
+            : this (workspace, cancellationToken, compilation)
         {
             if (cacheDirectory == null)
             {
@@ -43,15 +44,18 @@ namespace StackExchange.Precompilation
             _worker = CachedRazorWorker;
         }
 
-        public RazorParser(Workspace workspace, Compilation compilation)
+        public RazorParser(Workspace workspace, CancellationToken cancellationToken, Compilation compilation)
         {
             _workItems = new BlockingCollection<RazorTextLoader>();
             _workspace = workspace;
             _compilation = compilation;
             _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(compilation.CurrentDirectory.FullName, true) } } };
             _worker = RazorWorker;
+            _cancellationToken = cancellationToken;
             _backgroundWorkers = new Lazy<Task>(
-                () => Task.WhenAll(Enumerable.Range(0, Environment.ProcessorCount).Select(_ => Task.Run(BackgroundWorker))),
+                () => _cancellationToken.IsCancellationRequested
+                    ? Task.CompletedTask
+                    : Task.WhenAll(Enumerable.Range(0, Environment.ProcessorCount).Select(_ => Task.Run(BackgroundWorker, _cancellationToken))),
                 LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
@@ -59,6 +63,11 @@ namespace StackExchange.Precompilation
         {
             foreach(var loader in _workItems.GetConsumingEnumerable())
             {
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    loader.Result.SetCanceled();
+                    continue;
+                }
                 try
                 {
                     var originalText = await loader.OriginalLoader.LoadTextAndVersionAsync(_workspace, null, default(CancellationToken));
