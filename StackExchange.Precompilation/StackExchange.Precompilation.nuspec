@@ -19,6 +19,7 @@
     <releaseNotes>Version 4.4
 * added configurable support for caching the razor (.cshtml -> .cs) generation step
 * added optional razorCache element to the precompilation configuration section
+* fixing non-default langversion bug
 
 Version 4.1.1
 * updated roslyn packages to 2.3.2
