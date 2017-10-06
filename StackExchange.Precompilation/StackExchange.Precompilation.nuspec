@@ -20,6 +20,7 @@
 * added configurable support for caching the razor (.cshtml -> .cs) generation step
 * added optional razorCache element to the precompilation configuration section
 * fixing non-default langversion bug
+* better handling of failing precompilation modules
 
 Version 4.1.1
 * updated roslyn packages to 2.3.2

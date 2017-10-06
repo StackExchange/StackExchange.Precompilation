@@ -9,7 +9,7 @@
         <CompileDependsOn>
             $(CompileDependsOn);
             SEPrecompilerCore;
-        </CompileDependsOn> 
+        </CompileDependsOn>
         <SEPrecompilerTools>$(MSBuildThisFileDirectory)..\tools</SEPrecompilerTools>
         <UseAppConfigForCompiler Condition="'$(UseAppConfigForCompiler)' == '' and '$(SEPrecompilerSkip)' != 'true'">true</UseAppConfigForCompiler>
     </PropertyGroup>

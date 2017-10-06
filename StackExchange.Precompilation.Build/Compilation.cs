@@ -32,10 +32,18 @@ namespace StackExchange.Precompilation
         private const string DiagnosticCategory = "StackExchange.Precompilation";
         private static DiagnosticDescriptor FailedToCreateModule =
             new DiagnosticDescriptor("SE001", "Failed to instantiate ICompileModule", "Failed to instantiate ICompileModule '{0}': {1}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        private static DiagnosticDescriptor FailedToCreateCompilation =
+            new DiagnosticDescriptor("SE002", "Failed to create compilation", "{0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ViewGenerationFailed =
             new DiagnosticDescriptor("SE003", "View generation failed", "View generation failed: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor FailedParsingSourceTree =
             new DiagnosticDescriptor("SE004", "Failed parsing source tree", "Failed parasing source tree: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        internal static DiagnosticDescriptor PrecompilationModuleFailed =
+            new DiagnosticDescriptor("SE005", "Precompilation module failed", "{0}: {1}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        private static DiagnosticDescriptor AnalysisFailed =
+            new DiagnosticDescriptor("SE006", "Analysis failed", "{0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        private static DiagnosticDescriptor UnhandledException =
+            new DiagnosticDescriptor("SE006", "Unhandled exception", "Unhandled exception: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_FileNotFound =
             new DiagnosticDescriptor("CS2001", "FileNotFound", "Source file '{0}' could not be found", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_BinaryFile =
@@ -98,7 +106,7 @@ namespace StackExchange.Precompilation
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("error: failed to create compilation: " + ex.Message);
+                        Diagnostics.Add(Diagnostic.Create(FailedToCreateCompilation, Location.None, ex));
                         return false;
                     }
 
@@ -166,7 +174,7 @@ namespace StackExchange.Precompilation
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine("error: analysis failed: " + ex.Message);
+                        Diagnostics.Add(Diagnostic.Create(AnalysisFailed, Location.None, ex));
                         return false;
                     }
 
@@ -199,14 +207,28 @@ namespace StackExchange.Precompilation
                     return false;
                 }
             }
+            catch (PrecompilationModuleException pmex)
+            {
+                Diagnostics.Add(Diagnostic.Create(PrecompilationModuleFailed, Location.None, pmex.Message, pmex.InnerException));
+                return false;
+            }
             catch (Exception ex)
             {
-                Console.WriteLine(string.Join("\n", ex.ToString().Split('\n').Select((x, i) => x + $"ERROR: {i:D4} {x}")));
+                Diagnostics.Add(Diagnostic.Create(UnhandledException, Location.None, ex));
                 return false;
             }
             finally
             {
-                Diagnostics.ForEach(x => Console.WriteLine(x.ToString())); // strings only, since the Console.Out textwriter is another app domain...
+                // strings only, since the Console.Out textwriter is another app domain...
+                // https://stackoverflow.com/questions/2459994/is-there-a-way-to-print-a-new-line-when-using-message
+                for (var i = 0; i < Diagnostics.Count; i++)
+                {
+                    var d = Diagnostics[i];
+                    if (!d.IsSuppressed)
+                    {
+                        Console.WriteLine(d.ToString().Replace("\r", "").Replace("\n", "\\n"));
+                    }
+                }
             }
         }
 
@@ -389,12 +411,21 @@ namespace StackExchange.Precompilation
                 Apply(context, x => AfterCompileContext = x, m => m.AfterCompile);
             }
             private void Apply<TContext>(TContext ctx, Action<TContext> setter, Func<ICompileModule, Action<TContext>> actionGetter)
+                where TContext : ICompileContext
             {
                 setter(ctx);
                 foreach(var module in _modules)
                 {
-                    var action = actionGetter(module);
-                    action(ctx);
+                    try
+                    {
+                        var action = actionGetter(module);
+                        action(ctx);
+                    }
+                    catch (Exception ex)
+                    {
+                        var methodName = ctx is BeforeCompileContext ? nameof(ICompileModule.BeforeCompile) : nameof(ICompileModule.AfterCompile);
+                        throw new PrecompilationModuleException($"Precompilation module '{module.GetType().FullName}.{methodName}({typeof(TContext)})' failed", ex);
+                    }
                 }
             }
         }
@@ -419,6 +450,13 @@ namespace StackExchange.Precompilation
         public Location AsLocation(string path)
         {
             return Location.Create(path, new TextSpan(), new LinePositionSpan());
+        }
+
+        private class PrecompilationModuleException : Exception
+        {
+            public PrecompilationModuleException(string message, Exception inner) : base(message, inner)
+            {
+            }
         }
     }
 }
