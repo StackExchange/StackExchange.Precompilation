@@ -59,7 +59,7 @@ namespace StackExchange.Precompilation
 
         private async Task BackgroundWorker()
         {
-            foreach(var loader in _workItems.GetConsumingEnumerable())
+            foreach(var loader in _workItems.GetConsumingEnumerable(_cancellationToken))
             {
                 if (_cancellationToken.IsCancellationRequested)
                 {
@@ -118,7 +118,7 @@ namespace StackExchange.Precompilation
                     // todo should VersionStamp affect this as well?
                     sw.Write(originalText.FilePath);
                     sw.Write(originalText.Version);
-                    originalText.Text.Write(sw);
+                    originalText.Text.Write(sw, _cancellationToken);
                     sw.Flush();
                     str.Position = 0;
                     var hashBytes = md5.ComputeHash(str);
