@@ -50,7 +50,10 @@ namespace StackExchange.Precompilation
             new DiagnosticDescriptor("CS2015", "BinaryFile", "'{0}' is a binary file instead of a text file", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_NoSourceFile =
             new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}')", DiagnosticCategory, DiagnosticSeverity.Error, true);
-
+        internal static DiagnosticDescriptor CachingFailed =
+            new DiagnosticDescriptor("SE007", "Razor caching failed", "Caching generated cshtml for '{0}' failed, deleting file '{1}' - '{2}'", DiagnosticCategory, DiagnosticSeverity.Warning, true);
+        internal static DiagnosticDescriptor CachingFailedHard =
+            new DiagnosticDescriptor("SE007", "Razor caching failed hard", "Caching generated cshtml for '{0}' to '{1}' failed, unabled to delete cache file", DiagnosticCategory, DiagnosticSeverity.Error, true);
 
         public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
         {

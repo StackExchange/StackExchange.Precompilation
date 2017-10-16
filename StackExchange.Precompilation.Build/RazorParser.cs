@@ -22,7 +22,7 @@ namespace StackExchange.Precompilation
         private readonly Workspace _workspace;
         private readonly WebConfigurationFileMap _configMap;
         private readonly DirectoryInfo _cacheDirectory;
-        private readonly Func<TextAndVersion, Stream> _worker;
+        private readonly Func<TextAndVersion, Task<Stream>> _worker;
         private readonly BlockingCollection<RazorTextLoader> _workItems;
         private readonly Lazy<Task> _backgroundWorkers;
         private readonly CancellationToken _cancellationToken;
@@ -69,7 +69,7 @@ namespace StackExchange.Precompilation
                 try
                 {
                     var originalText = await loader.OriginalLoader.LoadTextAndVersionAsync(_workspace, null, default(CancellationToken));
-                    using (var stream = _worker(originalText))
+                    using (var stream = await _worker(originalText))
                     {
                         var generatedText = TextAndVersion.Create(
                             SourceText.From(stream, _compilation.Encoding, _compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: originalText.Text.CanBeEmbedded, throwIfBinaryDetected: true),
@@ -91,7 +91,7 @@ namespace StackExchange.Precompilation
             _workItems?.Dispose();
         }
 
-        private Stream CachedRazorWorker(TextAndVersion originalText)
+        private async Task<Stream> CachedRazorWorker(TextAndVersion originalText)
         {
             var cacheFile = GetCachedFileInfo();
             if (cacheFile.Exists)
@@ -100,14 +100,36 @@ namespace StackExchange.Precompilation
             }
             else
             {
-                var source = RazorWorker(originalText);
-                using (var fs = cacheFile.Create())
+                var source = await RazorWorker(originalText);
+                FileStream fs = null;
+                try
                 {
-                    source.CopyTo(fs);
+                    fs = cacheFile.Create();
+                    await source.CopyToAsync(fs, 4096, _cancellationToken);
+                    await fs.FlushAsync(_cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    ReportDiagnostic(Diagnostic.Create(Compilation.CachingFailed, Location.None, originalText.FilePath, cacheFile.FullName, ex));
+                    for (var i = 0; i < 10 && cacheFile.Exists; i++)
+                    {
+                        await Task.Delay(100 * i);
+                        try { cacheFile.Delete(); } catch { }
+                    }
+                    if (cacheFile.Exists)
+                    {
+                        ReportDiagnostic(Diagnostic.Create(Compilation.CachingFailedHard, Location.None, originalText.FilePath, cacheFile.FullName));
+                    }
+                }
+                finally
+                {
+                    fs?.Dispose();
                     source.Position = 0;
                 }
+
                 return source; // return the in-memory stream, since it's faster
             }
+
 
             FileInfo GetCachedFileInfo()
             {
@@ -129,7 +151,15 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private Stream RazorWorker(TextAndVersion originalText)
+        private void ReportDiagnostic(Diagnostic d)
+        {
+            lock (_compilation.Diagnostics)
+            {
+                _compilation.Diagnostics.Add(d);
+            }
+        }
+
+        private Task<Stream> RazorWorker(TextAndVersion originalText)
         {
             var generatedStream = new MemoryStream(capacity: originalText.Text.Length * 8); // generated .cs files contain a lot of additional crap vs actualy cshtml
             var viewFullPath = originalText.FilePath;
@@ -172,7 +202,7 @@ namespace StackExchange.Precompilation
                 generatedStream.Position = 0;
             }
 
-            return generatedStream;
+            return Task.FromResult<Stream>(generatedStream);
 
             string GetRelativeUri(string filespec, string folder)
             {
