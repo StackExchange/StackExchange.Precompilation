@@ -150,7 +150,8 @@ namespace StackExchange.Precompilation
                             embeddedTexts: CscArgs.EmbeddedFiles.AsEnumerable()
                                 .Select(x => TryOpenFile(x.Path, out var embeddedText) ? EmbeddedText.FromStream(x.Path, embeddedText) : null)
                                 .Where(x => x != null),
-                            debugEntryPoint: null);
+                            debugEntryPoint: null,
+                            cancellationToken: cancellationToken);
                     }
 
                     Diagnostics.AddRange(emitResult.Diagnostics);
