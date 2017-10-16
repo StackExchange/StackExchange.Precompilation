@@ -224,7 +224,7 @@ namespace StackExchange.Precompilation
                 for (var i = 0; i < Diagnostics.Count; i++)
                 {
                     var d = Diagnostics[i];
-                    if (!d.IsSuppressed)
+                    if (!d.IsSuppressed && d.Severity != DiagnosticSeverity.Hidden)
                     {
                         Console.WriteLine(d.ToString().Replace("\r", "").Replace("\n", "\\n"));
                     }

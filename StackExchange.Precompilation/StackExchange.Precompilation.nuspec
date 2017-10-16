@@ -21,6 +21,7 @@
 * added optional razorCache element to the precompilation configuration section
 * fixing non-default langversion bug
 * better handling of failing precompilation modules
+* don't ouput hidden diagnostics to console
 
 Version 4.1.1
 * updated roslyn packages to 2.3.2
