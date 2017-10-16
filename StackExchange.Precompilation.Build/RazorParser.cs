@@ -22,7 +22,6 @@ namespace StackExchange.Precompilation
         private readonly Workspace _workspace;
         private readonly WebConfigurationFileMap _configMap;
         private readonly DirectoryInfo _cacheDirectory;
-        private readonly MD5 _md5;
         private readonly Func<TextAndVersion, Stream> _worker;
         private readonly BlockingCollection<RazorTextLoader> _workItems;
         private readonly Lazy<Task> _backgroundWorkers;
@@ -40,7 +39,6 @@ namespace StackExchange.Precompilation
                 throw new ArgumentException($"Specified directory '{cacheDirectory.FullName}' doesn't exist.", nameof(cacheDirectory));
             }
             _cacheDirectory = cacheDirectory;
-            _md5 = MD5.Create();
             _worker = CachedRazorWorker;
         }
 
@@ -90,7 +88,6 @@ namespace StackExchange.Precompilation
 
         void IDisposable.Dispose()
         {
-            _md5?.Dispose();
             _workItems?.Dispose();
         }
 
@@ -114,6 +111,7 @@ namespace StackExchange.Precompilation
 
             FileInfo GetCachedFileInfo()
             {
+                using (var md5 = MD5.Create())
                 using (var str = new MemoryStream())
                 using (var sw = new StreamWriter(str))
                 {
@@ -123,7 +121,7 @@ namespace StackExchange.Precompilation
                     originalText.Text.Write(sw);
                     sw.Flush();
                     str.Position = 0;
-                    var hashBytes = _md5.ComputeHash(str);
+                    var hashBytes = md5.ComputeHash(str);
                     var fileName = BitConverter.ToString(hashBytes).Replace("-","") + ".cs";
                     var filePath = Path.Combine(_cacheDirectory.FullName, fileName);
                     return new FileInfo(filePath);
