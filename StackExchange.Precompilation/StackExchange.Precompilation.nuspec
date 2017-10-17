@@ -14,7 +14,7 @@
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.3.2" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.4.0" />
     </dependencies>
     <releaseNotes>Version 4.4
 * added configurable support for caching the razor (.cshtml -> .cs) generation step
@@ -22,6 +22,7 @@
 * fixing non-default langversion bug
 * better handling of failing precompilation modules
 * don't ouput hidden diagnostics to console
+* updated roslyn packages to 2.4.0
 
 Version 4.1.1
 * updated roslyn packages to 2.3.2
