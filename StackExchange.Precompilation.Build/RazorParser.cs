@@ -78,7 +78,7 @@ namespace StackExchange.Precompilation
                     RazorWorker worker = RazorWorker;
                     if (_cacheDirectory != null)
                     {
-                        worker = RazorWorker;
+                        worker = CachedRazorWorker;
                     }
 
                     using (var stream = await worker(host, originalText))
