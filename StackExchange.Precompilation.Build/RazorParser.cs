@@ -22,7 +22,7 @@ namespace StackExchange.Precompilation
         private readonly Workspace _workspace;
         private readonly WebConfigurationFileMap _configMap;
         private readonly DirectoryInfo _cacheDirectory;
-        private readonly Func<TextAndVersion, Task<Stream>> _worker;
+        private readonly Func<RazorEngineHost, TextAndVersion, Task<Stream>> _worker;
         private readonly BlockingCollection<RazorTextLoader> _workItems;
         private readonly Lazy<Task> _backgroundWorkers;
         private readonly CancellationToken _cancellationToken;
@@ -69,7 +69,14 @@ namespace StackExchange.Precompilation
                 try
                 {
                     var originalText = await loader.OriginalLoader.LoadTextAndVersionAsync(_workspace, null, default(CancellationToken));
-                    using (var stream = await _worker(originalText))
+                    var viewFullPath = originalText.FilePath;
+                    var viewVirtualPath = GetRelativeUri(originalText.FilePath, _compilation.CurrentDirectory.FullName);
+                    var viewConfig = WebConfigurationManager.OpenMappedWebConfiguration(_configMap, viewVirtualPath);
+                    var host = viewConfig.GetSectionGroup("system.web.webPages.razor") is RazorWebSectionGroup razorConfig
+                        ? WebRazorHostFactory.CreateHostFromConfig(razorConfig, viewVirtualPath, viewFullPath)
+                        : WebRazorHostFactory.CreateDefaultHost(viewVirtualPath, viewFullPath);
+
+                    using (var stream = await _worker(host, originalText))
                     {
                         var generatedText = TextAndVersion.Create(
                             SourceText.From(stream, _compilation.Encoding, _compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: originalText.Text.CanBeEmbedded, throwIfBinaryDetected: true),
@@ -91,7 +98,7 @@ namespace StackExchange.Precompilation
             _workItems?.Dispose();
         }
 
-        private async Task<Stream> CachedRazorWorker(TextAndVersion originalText)
+        private async Task<Stream> CachedRazorWorker(RazorEngineHost host, TextAndVersion originalText)
         {
             var cacheFile = GetCachedFileInfo();
             if (cacheFile.Exists)
@@ -100,7 +107,7 @@ namespace StackExchange.Precompilation
             }
             else
             {
-                var source = await RazorWorker(originalText);
+                var source = await RazorWorker(host, originalText);
                 FileStream fs = null;
                 try
                 {
@@ -137,10 +144,20 @@ namespace StackExchange.Precompilation
                 using (var str = new MemoryStream())
                 using (var sw = new StreamWriter(str))
                 {
-                    // todo should VersionStamp affect this as well?
-                    sw.Write(originalText.FilePath);
-                    sw.Write(originalText.Version);
-                    originalText.Text.Write(sw, _cancellationToken);
+
+                    // all those things can affect the generated c#
+                    // so we need to include them in the hash...
+                    sw.WriteLine(host.CodeLanguage.LanguageName);
+                    sw.WriteLine(host.CodeLanguage.CodeDomProviderType.FullName);
+                    sw.WriteLine(host.DefaultBaseClass);
+                    sw.WriteLine(host.DefaultClassName);
+                    sw.WriteLine(host.DefaultNamespace);
+                    sw.WriteLine(string.Join(";",host.NamespaceImports));
+                    sw.WriteLine(host.StaticHelpers);
+                    sw.WriteLine(host.TabSize);
+                    sw.WriteLine(originalText.FilePath);
+                    originalText.Text.Write(sw, _cancellationToken); // .cshtml content
+
                     sw.Flush();
                     str.Position = 0;
                     var hashBytes = md5.ComputeHash(str);
@@ -159,15 +176,10 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private Task<Stream> RazorWorker(TextAndVersion originalText)
+        private Task<Stream> RazorWorker(RazorEngineHost host, TextAndVersion originalText)
         {
             var generatedStream = new MemoryStream(capacity: originalText.Text.Length * 8); // generated .cs files contain a lot of additional crap vs actualy cshtml
             var viewFullPath = originalText.FilePath;
-            var viewVirtualPath = GetRelativeUri(originalText.FilePath, _compilation.CurrentDirectory.FullName);
-            var viewConfig = WebConfigurationManager.OpenMappedWebConfiguration(_configMap, viewVirtualPath);
-            var host = viewConfig.GetSectionGroup("system.web.webPages.razor") is RazorWebSectionGroup razorConfig
-                ? WebRazorHostFactory.CreateHostFromConfig(razorConfig, viewVirtualPath, viewFullPath)
-                : WebRazorHostFactory.CreateDefaultHost(viewVirtualPath, viewFullPath);
             using (var sourceReader = new StreamReader(generatedStream, _compilation.Encoding, false, 4096, leaveOpen: true))
             using (var provider = CodeDomProvider.CreateProvider("csharp"))
             using (var generatedWriter = new StreamWriter(generatedStream, _compilation.Encoding, 4096, leaveOpen: true))
@@ -203,17 +215,17 @@ namespace StackExchange.Precompilation
             }
 
             return Task.FromResult<Stream>(generatedStream);
+        }
 
-            string GetRelativeUri(string filespec, string folder)
+        private string GetRelativeUri(string filespec, string folder)
+        {
+            Uri pathUri = new Uri(filespec);
+            if (!folder.EndsWith(Path.DirectorySeparatorChar.ToString()))
             {
-                Uri pathUri = new Uri(filespec);
-                if (!folder.EndsWith(Path.DirectorySeparatorChar.ToString()))
-                {
-                    folder += Path.DirectorySeparatorChar;
-                }
-                Uri folderUri = new Uri(folder);
-                return "/" + folderUri.MakeRelativeUri(pathUri).ToString().TrimStart('/');
+                folder += Path.DirectorySeparatorChar;
             }
+            Uri folderUri = new Uri(folder);
+            return "/" + folderUri.MakeRelativeUri(pathUri).ToString().TrimStart('/');
         }
 
         public DocumentInfo Wrap(DocumentInfo document)
