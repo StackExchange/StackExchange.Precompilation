@@ -13,6 +13,7 @@ using Microsoft.CodeAnalysis;
 using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.CodeAnalysis.Text;
+using RazorWorker = System.Func<System.Web.Razor.RazorEngineHost, Microsoft.CodeAnalysis.TextAndVersion, System.Threading.Tasks.Task<System.IO.Stream>>;
 
 namespace StackExchange.Precompilation
 {
@@ -22,7 +23,6 @@ namespace StackExchange.Precompilation
         private readonly Workspace _workspace;
         private readonly WebConfigurationFileMap _configMap;
         private readonly DirectoryInfo _cacheDirectory;
-        private readonly Func<RazorEngineHost, TextAndVersion, Task<Stream>> _worker;
         private readonly BlockingCollection<RazorTextLoader> _workItems;
         private readonly Lazy<Task> _backgroundWorkers;
         private readonly CancellationToken _cancellationToken;
@@ -39,7 +39,6 @@ namespace StackExchange.Precompilation
                 throw new ArgumentException($"Specified directory '{cacheDirectory.FullName}' doesn't exist.", nameof(cacheDirectory));
             }
             _cacheDirectory = cacheDirectory;
-            _worker = CachedRazorWorker;
         }
 
         public RazorParser(Workspace workspace, CancellationToken cancellationToken, Compilation compilation)
@@ -48,7 +47,6 @@ namespace StackExchange.Precompilation
             _workspace = workspace;
             _compilation = compilation;
             _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(compilation.CurrentDirectory.FullName, true) } } };
-            _worker = RazorWorker;
             _cancellationToken = cancellationToken;
             _backgroundWorkers = new Lazy<Task>(
                 () => _cancellationToken.IsCancellationRequested
@@ -76,7 +74,14 @@ namespace StackExchange.Precompilation
                         ? WebRazorHostFactory.CreateHostFromConfig(razorConfig, viewVirtualPath, viewFullPath)
                         : WebRazorHostFactory.CreateDefaultHost(viewVirtualPath, viewFullPath);
 
-                    using (var stream = await _worker(host, originalText))
+                    // having this as a field would require the ASP.NET MVC dependency even for console apps...
+                    RazorWorker worker = RazorWorker;
+                    if (_cacheDirectory != null)
+                    {
+                        worker = RazorWorker;
+                    }
+
+                    using (var stream = await worker(host, originalText))
                     {
                         var generatedText = TextAndVersion.Create(
                             SourceText.From(stream, _compilation.Encoding, _compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: originalText.Text.CanBeEmbedded, throwIfBinaryDetected: true),
