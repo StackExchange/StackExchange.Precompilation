@@ -13,10 +13,13 @@
     <language>en-US</language>
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
-      <dependency id="Microsoft.AspNet.Mvc" version="5.0.0" />
+      <dependency id="Microsoft.AspNet.Mvc" version="5.2.3" />
       <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.4.0" />
     </dependencies>
-    <releaseNotes>Version 4.4
+    <releaseNotes>Version 4.5
+* upped MVC5 to latest minor version (5.2.3)
+
+Version 4.4
 * added configurable support for caching the razor (.cshtml -> .cs) generation step
 * added optional razorCache element to the precompilation configuration section
 * fixing non-default langversion bug
