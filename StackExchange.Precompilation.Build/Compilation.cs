@@ -345,11 +345,16 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private RazorParser CreateRazorParser(Workspace workspace, CancellationToken cancellationToken) =>
-            PrecompilerSection.Current?.RazorCache?.Directory is var dir &&
-            string.IsNullOrWhiteSpace(dir)
+        private RazorParser CreateRazorParser(Workspace workspace, CancellationToken cancellationToken)
+        {
+            var dir = PrecompilerSection.Current?.RazorCache?.Directory;
+            dir = string.IsNullOrWhiteSpace(dir)
+                ? Environment.GetEnvironmentVariable(nameof(Precompilation) + "_" + nameof(PrecompilerSection.RazorCache) + nameof(RazorCacheElement.Directory))
+                : dir;
+            return string.IsNullOrWhiteSpace(dir)
                 ? new RazorParser(workspace, cancellationToken, this)
                 : new RazorParser(workspace, cancellationToken, this, Directory.CreateDirectory(Path.Combine(CscArgs.OutputDirectory, dir)));
+        }
 
         private bool TryOpenFile(string path, out Stream stream)
         {

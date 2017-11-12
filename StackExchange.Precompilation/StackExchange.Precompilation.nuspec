@@ -18,6 +18,7 @@
     </dependencies>
     <releaseNotes>Version 4.5
 * upped MVC5 to latest minor version (5.2.3)
+* razor cache directory option can ge passed in via PRECOMPILATION_RAZORCACHEDIRECTORY environment variable
 
 Version 4.4
 * added configurable support for caching the razor (.cshtml -> .cs) generation step
