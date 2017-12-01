@@ -30,5 +30,7 @@ namespace Test.WebApp.Controllers
                 ViewData = new ViewDataDictionary(new Models.SampleModel { ViewPaths = new [] { "OVERRIDDDDDEN" } }),
             };
         }
+
+        public ActionResult ExcludedLayout() => View();
     }
 }
