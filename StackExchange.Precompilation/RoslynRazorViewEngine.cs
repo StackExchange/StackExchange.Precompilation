@@ -64,69 +64,22 @@ namespace StackExchange.Precompilation
         }
 
         /// <inheritdoc />
+        protected override IVirtualPathFactory CreateVirtualPathFactory() => new PrecompilationVirtualPathFactory(
+            runtime: this,
+            precompiled: ViewEngines.Engines.OfType<PrecompiledViewEngine>().FirstOrDefault());
+
+        /// <inheritdoc />
         protected override IView CreatePartialView(ControllerContext controllerContext, string partialPath) =>
-            new RoslynRazorView(this, controllerContext, partialPath, GetTypeFromVirtualPath(partialPath), false, null);
+            new PrecompilationView(partialPath, null, GetTypeFromVirtualPath(partialPath), false, this);
 
         /// <inheritdoc />
         protected override IView CreateView(ControllerContext controllerContext, string viewPath, string masterPath) =>
-            new RoslynRazorView(this, controllerContext, viewPath, GetTypeFromVirtualPath(viewPath), true, masterPath);
+            new PrecompilationView(viewPath, masterPath, GetTypeFromVirtualPath(viewPath), true, this);
 
+        internal bool FileExists(string virtualPath) =>
+            HostingEnvironment.VirtualPathProvider.FileExists(virtualPath);
 
-        private class RoslynRazorView : IView, IVirtualPathFactory
-        {
-            private readonly Type _type;
-            private readonly string _virtualPath;
-            private readonly RoslynRazorViewEngine _viewEngine;
-            private readonly bool _runViewStartPages;
-            private readonly ControllerContext _controllerContext;
-            private readonly string _overridenLayoutPath;
-
-            public RoslynRazorView(RoslynRazorViewEngine viewEngine, ControllerContext controllerContext, string virtualPath, Type type, bool runViewStartPages, string overridenLayoutPath)
-            {
-                _type = type;
-                _virtualPath = virtualPath;
-                _viewEngine = viewEngine;
-                _runViewStartPages = runViewStartPages;
-                _controllerContext = controllerContext;
-                _overridenLayoutPath = overridenLayoutPath;
-            }
-            public void Render(ViewContext viewContext, TextWriter writer)
-            {
-                var basePage = (WebPageBase)Activator.CreateInstance(_type);
-                if (basePage == null)
-                {
-                    throw new InvalidOperationException("Invalid view type: " + _virtualPath);
-                }
-                basePage.VirtualPath = _virtualPath;
-                basePage.VirtualPathFactory = this;
-
-                var startPage = _runViewStartPages
-                    ? StartPage.GetStartPage(basePage, "_ViewStart", _viewEngine.FileExtensions)
-                    : null;
-
-                var webViewPage = basePage as WebViewPage;
-                if (webViewPage != null)
-                {
-                    if (!string.IsNullOrEmpty(_overridenLayoutPath))
-                    {
-                        Hacks.SetOverriddenLayoutPath(webViewPage, _overridenLayoutPath);
-                    }
-                    webViewPage.ViewContext = viewContext;
-                    webViewPage.ViewData = viewContext.ViewData;
-                    webViewPage.InitHelpers();
-                }
-                var pageContext = new WebPageContext(viewContext.HttpContext, basePage, viewContext.ViewData?.Model);
-                basePage.ExecutePageHierarchy(pageContext, writer, startPage);
-            }
-
-            public object CreateInstance(string virtualPath) =>
-                Activator.CreateInstance(_viewEngine.GetTypeFromVirtualPath(virtualPath));
-
-            public bool Exists(string virtualPath) =>
-                _viewEngine.FileExists(controllerContext: _controllerContext, virtualPath: virtualPath);
-        }
-
-        private Type GetTypeFromVirtualPath(string virtualPath)
+        internal Type GetTypeFromVirtualPath(string virtualPath)
         {
             virtualPath = VirtualPathUtility.ToAbsolute(virtualPath);
 
@@ -144,10 +97,9 @@ namespace StackExchange.Precompilation
             return type;
         }
 
-
         private Type GetTypeFromVirtualPathNoCache(string virtualPath)
         {
-            using (DoProfileStep($"{nameof(RoslynRazorViewEngine)}: Compiling {virtualPath}"))
+            using (this.DoProfileStep($"{nameof(RoslynRazorViewEngine)}: Compiling {virtualPath}"))
             {
                 OnCodeGenerationStarted();
                 var args = new CompilingPathEventArgs(virtualPath, WebRazorHostFactory.CreateHostFromConfig(virtualPath));

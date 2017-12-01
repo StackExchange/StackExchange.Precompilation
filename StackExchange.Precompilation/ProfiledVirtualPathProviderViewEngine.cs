@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Web.Mvc;
+using System.Web.WebPages;
 
 namespace StackExchange.Precompilation
 {
@@ -13,14 +14,25 @@ namespace StackExchange.Precompilation
         /// </summary>
         public Func<string, IDisposable> ProfileStep { get; set; }
 
-        /// <summary>
-        /// Triggers the <see cref="ProfileStep"/>
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        protected IDisposable DoProfileStep(string name)
+        internal IVirtualPathFactory VirtualPathFactory => _virtualPathFactoryFactory.Value;
+
+        protected abstract IVirtualPathFactory CreateVirtualPathFactory();
+
+        private readonly Lazy<IVirtualPathFactory> _virtualPathFactoryFactory; // sorry, I had to...
+        
+        /// <inheritdoc />
+        protected ProfiledVirtualPathProviderViewEngine()
         {
-            return ProfileStep?.Invoke(name);
+            _virtualPathFactoryFactory = new Lazy<IVirtualPathFactory>(CreateVirtualPathFactory);
         }
+    }
+
+    internal static class ProfileVirtualPathProviderViewEngineExtensions
+    {
+        /// <summary>
+        /// Invokes the <see cref="ProfiledVirtualPathProviderViewEngine.ProfileStep"/> if it's set.
+        /// </summary>
+        public static IDisposable DoProfileStep(this ProfiledVirtualPathProviderViewEngine instance, string name) =>
+            instance?.ProfileStep?.Invoke(name);
     }
 }

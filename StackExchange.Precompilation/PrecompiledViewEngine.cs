@@ -12,104 +12,12 @@ using System.Web.WebPages;
 
 namespace StackExchange.Precompilation
 {
+
     /// <summary>
     /// Supports loading of precompiled views.
     /// </summary>
     public class PrecompiledViewEngine : ProfiledVirtualPathProviderViewEngine
     {
-        private class PrecompiledVirtualPathFactory : IVirtualPathFactory
-        {
-            private Func<string, Type> PathLookup;
-            private IVirtualPathFactory Backup;
-
-            public PrecompiledVirtualPathFactory(Func<string, Type> pathLookup, IVirtualPathFactory backup)
-            {
-                PathLookup = pathLookup;
-                Backup = backup;
-            }
-
-            public object CreateInstance(string virtualPath)
-            {
-                var compiledType = PathLookup(virtualPath);
-                if (compiledType != null)
-                {
-                    return Activator.CreateInstance(compiledType);
-                }
-
-                return Backup.CreateInstance(virtualPath);
-            }
-
-            public bool Exists(string virtualPath)
-            {
-                if (PathLookup(virtualPath) != null) return true;
-
-                return Backup.Exists(virtualPath);
-            }
-        }
-
-        private class PrecompiledView : IView
-        {
-            private readonly string Path;
-            private readonly string MasterPath;
-            private readonly Type Compiled;
-            private readonly Func<string, Type> CompiledTypeLookup;
-            private readonly PrecompiledViewEngine ViewEngine;
-            private readonly bool RunViewStart;
-
-            public PrecompiledView(string path, string masterPath, Type compiled, Func<string, Type> compiledTypeLookup, bool runViewStart, PrecompiledViewEngine viewEngine)
-            {
-                Path = path;
-                MasterPath = masterPath;
-                Compiled = compiled;
-                CompiledTypeLookup = compiledTypeLookup;
-                RunViewStart = runViewStart;
-                ViewEngine = viewEngine;
-            }
-
-            private WebPageBase CreatePage(ViewContext viewContext, System.IO.TextWriter writer, out WebPageContext pageContext, out WebPageRenderingBase startPage)
-            {
-                var basePage = (WebPageBase)Activator.CreateInstance(Compiled);
-                basePage.VirtualPath = Path;
-                basePage.VirtualPathFactory = new PrecompiledVirtualPathFactory(CompiledTypeLookup, basePage.VirtualPathFactory);
-
-                pageContext = new WebPageContext(viewContext.HttpContext, basePage, null);
-
-                startPage = RunViewStart
-                    ? StartPage.GetStartPage(basePage, "_ViewStart", ViewEngine.FileExtensions)
-                    : null;
-
-                var viewPage = basePage as WebViewPage;
-                if (viewPage != null)
-                {
-                    if (!string.IsNullOrEmpty(MasterPath))
-                    {
-                        Hacks.SetOverriddenLayoutPath(viewPage, MasterPath);
-                    }
-
-                    viewPage.ViewContext = viewContext;
-                    viewPage.ViewData = viewContext.ViewData;
-                    viewPage.InitHelpers();
-                }
-
-                return basePage;
-            }
-
-            public void Render(ViewContext viewContext, System.IO.TextWriter writer)
-            {
-                using (ViewEngine.DoProfileStep("Render"))
-                {
-                    WebPageContext pageContext;
-                    WebPageRenderingBase startPage;
-                    var webViewPage = CreatePage(viewContext, writer, out pageContext, out startPage);
-
-                    using (ViewEngine.DoProfileStep("ExecutePageHierarchy"))
-                    {
-                        webViewPage.ExecutePageHierarchy(pageContext, writer, startPage);
-                    }
-                }
-            }
-        }
-
         /// <summary>
         /// Gets the view paths
         /// </summary>
@@ -203,6 +111,11 @@ namespace StackExchange.Precompilation
             ViewPaths = _views.Keys.OrderBy(_ => _).ToList();
         }
 
+        /// <inheritdoc />
+        protected override IVirtualPathFactory CreateVirtualPathFactory() => new PrecompilationVirtualPathFactory(
+            precompiled: this,
+            runtime: ViewEngines.Engines.OfType<RoslynRazorViewEngine>().FirstOrDefault());
+
         private static string MakeVirtualPath(string absoluteViewPath, string absoluteDirectoryPath = null)
         {
             if (absoluteDirectoryPath != null && absoluteViewPath.StartsWith(absoluteDirectoryPath))
@@ -289,7 +202,7 @@ namespace StackExchange.Precompilation
             CreateViewImpl(viewPath, masterPath, runViewStart: true);
 
 
-        private Type TryLookupCompiledType(string viewPath)
+        internal Type TryLookupCompiledType(string viewPath)
         {
             Type compiledView;
             if (!_views.TryGetValue(viewPath, out compiledView))
@@ -299,16 +212,15 @@ namespace StackExchange.Precompilation
 
             return compiledView;
         }
-
-        private PrecompiledView CreateViewImpl(string viewPath, string masterPath, bool runViewStart)
+        private IView CreateViewImpl(string viewPath, string masterPath, bool runViewStart)
         {
-            Type compiledView;
-            if (!_views.TryGetValue(viewPath, out compiledView))
+            var compiledType = TryLookupCompiledType(viewPath);
+            if (compiledType == null)
             {
                 return null;
             }
 
-            return new PrecompiledView(viewPath, masterPath, compiledView, TryLookupCompiledType, runViewStart, this);
+            return new PrecompilationView(viewPath, masterPath, compiledType, runViewStart, this);
         }
 
         /// <inheritdoc />

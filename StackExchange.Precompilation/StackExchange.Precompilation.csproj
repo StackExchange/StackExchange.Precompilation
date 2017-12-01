@@ -169,6 +169,8 @@
     <Compile Include="CompiledFromDirectoryAttribute.cs" />
     <Compile Include="CompiledFromFileAttribute.cs" />
     <Compile Include="Hacks.cs" />
+    <Compile Include="PrecompilationView.cs" />
+    <Compile Include="PrecompilationVirtualPathFactory.cs" />
     <Compile Include="PrecompiledViewEngine.cs" />
     <Compile Include="ProfiledVirtualPathProviderViewEngine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
