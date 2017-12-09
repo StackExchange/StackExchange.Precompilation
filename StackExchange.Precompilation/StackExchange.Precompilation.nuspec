@@ -14,9 +14,14 @@
     <tags>Razor AspNet MsBuild Roslyn Metaprogramming</tags>
     <dependencies>
       <dependency id="Microsoft.AspNet.Mvc" version="5.2.3" />
-      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.4.0" />
+      <dependency id="Microsoft.CodeAnalysis.CSharp" version="2.6.0" />
     </dependencies>
-    <releaseNotes>Version 4.5
+    <releaseNotes>
+Version 4.6
+* updated roslyn packages to latest version (2.6)
+* fixed case where layout and view page weren't resolvable by the same view engine
+
+Version 4.5
 * upped MVC5 to latest minor version (5.2.3)
 * razor cache directory option can ge passed in via PRECOMPILATION_RAZORCACHEDIRECTORY environment variable
 
