@@ -15,7 +15,7 @@ namespace Test.ConsoleApp
         static void Main(string[] args)
         {
             Console.WriteLine(PathMapTest());
-            Console.WriteLine(nameof(aliastest::System.Xml.Linq.Extensions));
+            Console.WriteLine(nameof(aliastest::System.Data.DataSet));
             Console.ReadLine().Dump();
         }
 

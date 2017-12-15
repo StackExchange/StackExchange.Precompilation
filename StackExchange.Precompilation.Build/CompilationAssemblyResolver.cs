@@ -39,7 +39,7 @@ namespace StackExchange.Precompilation
             thisAssembly.GetManifestResourceNames()
                 .AsParallel()
                 .Where(x => x.StartsWith(prefix))
-                .ForAll(resourceKey => 
+                .ForAll(resourceKey =>
                 {
                     using (var resource = thisAssembly.GetManifestResourceStream(resourceKey))
                     using (var ms = new MemoryStream())
