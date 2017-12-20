@@ -44,11 +44,11 @@ namespace StackExchange.Precompilation
 
         public bool Exists(string virtualPath)
         {
-            if (_precompiled.TryLookupCompiledType(virtualPath) != null)
+            if (_precompiled?.TryLookupCompiledType(virtualPath) != null)
             {
                 return true;
             }
-            else if (_runtime.FileExists(virtualPath))
+            else if (_runtime?.FileExists(virtualPath) == true)
             {
                 return true;
             }
