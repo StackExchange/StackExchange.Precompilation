@@ -5,6 +5,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Test.WebApp</RootNamespace>
     <TargetFramework>net462</TargetFramework>
+    <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\StackExchange.Precompilation.Metaprogramming\StackExchange.Precompilation.Metaprogramming.csproj">

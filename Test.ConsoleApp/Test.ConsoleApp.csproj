@@ -7,6 +7,7 @@
     <TargetFramework>net462</TargetFramework>
     <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\net462\</SEPrecompilerPath>
     <PathMap>$(SolutionDir)\=https://example.org/</PathMap>
+    <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
