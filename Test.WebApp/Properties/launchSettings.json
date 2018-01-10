@@ -1,0 +1,18 @@
+{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:51526/",
+      "sslPort": 0
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files\\IIS Express\\iisexpress.exe",
+      "commandLineArgs": "/path:\"$(SolutionDir)$(ProjectName)\" /port:51526 /systray:true",
+      "workingDirectory": "C:\\Program Files\\IIS Express"
+    }
+  }
+}
