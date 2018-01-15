@@ -71,6 +71,8 @@ namespace StackExchange.Precompilation
             }
         }
 
+        public override object InitializeLifetimeService() => null;
+
         private CancellationTokenSource _cts;
 
         // ReSharper disable MemberCanBeMadeStatic.Local
