@@ -22,6 +22,7 @@
       <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
     <None Include="*.targets" Pack="true" PackagePath="build" />
+    <None Include="App.config" Pack="true" PackagePath="tools\$(AssemblyName).exe.config" />
   </ItemGroup>
 
   <!-- don't copy stuff to bin folder, since that's what happens in when the nuget package is used too -->
