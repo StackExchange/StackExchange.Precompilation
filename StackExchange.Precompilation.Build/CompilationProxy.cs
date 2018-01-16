@@ -9,13 +9,6 @@ namespace StackExchange.Precompilation
 {
     class CompilationProxy : MarshalByRefObject
     {
-        private void SetConsoleIo(TextReader @in, TextWriter @out, TextWriter error)
-        {
-            Console.SetIn(@in);
-            Console.SetOut(@out);
-            Console.SetError(error);
-        }
-
         public static bool RunCs(string[] args)
         {
             var precompilationArgs = PrecompilationCommandLineParser.Parse(args, Directory.GetCurrentDirectory());
@@ -59,7 +52,6 @@ namespace StackExchange.Precompilation
                     typeof(CompilationProxy).Assembly.FullName,
                     typeof(CompilationProxy).FullName);
 
-                proxy.SetConsoleIo(Console.In, Console.Out, Console.Error);
                 Console.CancelKeyPress += (s, e) => proxy?.ForceStop();
                 return proxy.RunCs(precompilationArgs);
             }
