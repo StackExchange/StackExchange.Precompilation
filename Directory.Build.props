@@ -14,6 +14,11 @@
     <RepositoryUrl>https://github.com/StackExchange/StackExchange.Precompilation</RepositoryUrl>
     <ProjectUrl>https://github.com/StackExchange/StackExchange.Precompilation</ProjectUrl>
     <PackageReleaseNotes><![CDATA[
+Version 4.6.1
+* fixed perf regression due to missing app.config with proper GC settings in the .Build package
+* updated roslyn packages to latest version (2.6.1)
+* fixed remoting runtime exception in long builds
+
 Version 4.6
 * updated roslyn packages to latest version (2.6)
 * fixed case where layout and view page weren't resolvable by the same view engine
