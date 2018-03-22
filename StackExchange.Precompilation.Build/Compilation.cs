@@ -43,7 +43,7 @@ namespace StackExchange.Precompilation
         private static DiagnosticDescriptor AnalysisFailed =
             new DiagnosticDescriptor("SE006", "Analysis failed", "{0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         private static DiagnosticDescriptor UnhandledException =
-            new DiagnosticDescriptor("SE006", "Unhandled exception", "Unhandled exception: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
+            new DiagnosticDescriptor("SE007", "Unhandled exception", "Unhandled exception: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_FileNotFound =
             new DiagnosticDescriptor("CS2001", "FileNotFound", "Source file '{0}' could not be found", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor ERR_BinaryFile =
@@ -51,9 +51,10 @@ namespace StackExchange.Precompilation
         internal static DiagnosticDescriptor ERR_NoSourceFile =
             new DiagnosticDescriptor("CS1504", "NoSourceFile", "Source file '{0}' could not be opened ('{1}')", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor CachingFailed =
-            new DiagnosticDescriptor("SE007", "Razor caching failed", "Caching generated cshtml for '{0}' failed, deleting file '{1}' - '{2}'", DiagnosticCategory, DiagnosticSeverity.Warning, true);
+            new DiagnosticDescriptor("SE008", "Razor caching failed", "Caching generated cshtml for '{0}' failed, deleting file '{1}' - '{2}'", DiagnosticCategory, DiagnosticSeverity.Warning, true);
         internal static DiagnosticDescriptor CachingFailedHard =
-            new DiagnosticDescriptor("SE007", "Razor caching failed hard", "Caching generated cshtml for '{0}' to '{1}' failed, unabled to delete cache file", DiagnosticCategory, DiagnosticSeverity.Error, true);
+            new DiagnosticDescriptor("SE009", "Razor caching failed hard", "Caching generated cshtml for '{0}' to '{1}' failed, unabled to delete cache file", DiagnosticCategory, DiagnosticSeverity.Error, true);
+        internal static DiagnosticDescriptor RazorParserError =
 
         public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
         {
