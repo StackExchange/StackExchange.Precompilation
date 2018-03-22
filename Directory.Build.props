@@ -17,6 +17,7 @@
 Version 4.7.0
 * updated roslyn packages to 2.7.0
 * cleaned up diagnostics numbers
+* report source text in razor HttpParseExceptions
 
 Version 4.6.1
 * fixed perf regression due to missing app.config with proper GC settings in the .Build package

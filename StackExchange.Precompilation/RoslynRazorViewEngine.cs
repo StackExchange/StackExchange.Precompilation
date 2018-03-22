@@ -122,7 +122,13 @@ namespace StackExchange.Precompilation
                 var razorResult = engine.GenerateCode(viewReader, className: null, rootNamespace: null, sourceFileName: host.PhysicalPath);
                 if (!razorResult.Success)
                 {
-                    throw CreateExceptionFromParserError(razorResult.ParserErrors.Last(), virtualPath);
+                    var sourceCode = (string)null;
+                    if (viewStream.CanSeek)
+                    {
+                        viewStream.Seek(0, SeekOrigin.Begin);
+                        sourceCode = viewReader.ReadToEnd();
+                    }
+                    throw CreateExceptionFromParserError(razorResult.ParserErrors.Last(), virtualPath, sourceCode);
                 }
                 OnCodeGenerationCompleted(razorResult.GeneratedCode, host);
                 return razorResult;
@@ -152,7 +158,7 @@ namespace StackExchange.Precompilation
             }
         }
 
-        // we were getting OutOfMemory exceptions caused by MetadataReference.CreateFrom* creating 
+        // we were getting OutOfMemory exceptions caused by MetadataReference.CreateFrom* creating
         // System.Reflection.PortableExecutable.PEReader instances for the same assembly for each view being compiled
         private static readonly ConcurrentDictionary<string, Lazy<MetadataReference>> ReferenceCache = new ConcurrentDictionary<string, Lazy<MetadataReference>>();
         internal static MetadataReference ResolveReference(Assembly assembly)
@@ -201,8 +207,8 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private static HttpParseException CreateExceptionFromParserError(RazorError error, string virtualPath) =>
-            new HttpParseException(error.Message + Environment.NewLine, null, virtualPath, null, error.Location.LineIndex + 1);
+        private static HttpParseException CreateExceptionFromParserError(RazorError error, string virtualPath, string sourceCode) =>
+            new HttpParseException(error.Message + Environment.NewLine, null, virtualPath, sourceCode, error.Location.LineIndex + 1);
 
         /// <summary>
         /// This is the equivalent of the <see cref="RazorBuildProvider.CompilingPath"/> event, since <see cref="PrecompiledViewEngine"/> bypasses <see cref="RazorBuildProvider"/> completely.
