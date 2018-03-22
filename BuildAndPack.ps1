@@ -42,3 +42,8 @@ if ($MsBuildArgs)
 }
 
 & msbuild $defaultArgs
+
+if ($LastExitCode -ne 0)
+{
+    throw "MSBuild failed"
+}
