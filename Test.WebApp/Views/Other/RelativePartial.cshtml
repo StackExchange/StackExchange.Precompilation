@@ -1,1 +1,14 @@
 ﻿RelativePartial.cshtml
+@{
+    @*
+    code bellow is a repro case for a Razer parser errors, that were only caught
+    in RoslynRazorViewEngine but not during precompilation...
+
+    to repro use `@foreach` instead of `foreach`
+    *@
+
+    foreach(var x in new []{1,2,3})
+    {
+        @:@x,
+    }
+}

@@ -55,6 +55,7 @@ namespace StackExchange.Precompilation
         internal static DiagnosticDescriptor CachingFailedHard =
             new DiagnosticDescriptor("SE009", "Razor caching failed hard", "Caching generated cshtml for '{0}' to '{1}' failed, unabled to delete cache file", DiagnosticCategory, DiagnosticSeverity.Error, true);
         internal static DiagnosticDescriptor RazorParserError =
+            new DiagnosticDescriptor("SE010", "Razor parser error", "Razor parser error: {0}", DiagnosticCategory, DiagnosticSeverity.Error, true);
 
         public Compilation(PrecompilationCommandLineArgs precompilationCommandLineArgs)
         {

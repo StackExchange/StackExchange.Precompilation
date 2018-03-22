@@ -112,13 +112,17 @@ namespace StackExchange.Precompilation
             }
             else
             {
-                var source = await RazorWorker(host, originalText);
+                (var success, var source) = await RazorWorkerImpl(host, originalText);
+
                 FileStream fs = null;
                 try
                 {
-                    fs = cacheFile.Create();
-                    await source.CopyToAsync(fs, 4096, _cancellationToken);
-                    await fs.FlushAsync(_cancellationToken);
+                    if (success)
+                    {
+                        fs = cacheFile.Create();
+                        await source.CopyToAsync(fs, 4096, _cancellationToken);
+                        await fs.FlushAsync(_cancellationToken);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -181,8 +185,12 @@ namespace StackExchange.Precompilation
             }
         }
 
-        private Task<Stream> RazorWorker(RazorEngineHost host, TextAndVersion originalText)
+        private Task<Stream> RazorWorker(RazorEngineHost host, TextAndVersion originalText) =>
+            RazorWorkerImpl(host, originalText).ContinueWith(x => x.Result.result, TaskContinuationOptions.OnlyOnRanToCompletion);
+
+        private Task<(bool success, Stream result)> RazorWorkerImpl(RazorEngineHost host, TextAndVersion originalText)
         {
+            var success = true;
             var generatedStream = new MemoryStream(capacity: originalText.Text.Length * 8); // generated .cs files contain a lot of additional crap vs actualy cshtml
             var viewFullPath = originalText.FilePath;
             using (var sourceReader = new StreamReader(generatedStream, _compilation.Encoding, false, 4096, leaveOpen: true))
@@ -197,6 +205,22 @@ namespace StackExchange.Precompilation
                 // generated code and clear memory stream
                 var engine = new RazorTemplateEngine(host);
                 var razorOut = engine.GenerateCode(sourceReader, null, null, viewFullPath);
+
+                if (!razorOut.Success)
+                {
+                    success = false;
+                    foreach(var error in razorOut.ParserErrors)
+                    {
+                        var position = new LinePosition(error.Location.LineIndex, error.Location.CharacterIndex - 1);
+                        ReportDiagnostic(Diagnostic.Create(
+                            Compilation.RazorParserError,
+                            Location.Create(
+                                originalText.FilePath,
+                                new TextSpan(error.Location.AbsoluteIndex, error.Length),
+                                new LinePositionSpan(position, position)),
+                            error.Message));
+                    }
+                }
 
                 // add the CompiledFromFileAttribute to the generated class
                 razorOut.GeneratedCode
@@ -219,7 +243,7 @@ namespace StackExchange.Precompilation
                 generatedStream.Position = 0;
             }
 
-            return Task.FromResult<Stream>(generatedStream);
+            return Task.FromResult((success: success, stream: (Stream)generatedStream));
         }
 
         private string GetRelativeUri(string filespec, string folder)
