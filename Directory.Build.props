@@ -16,6 +16,8 @@
     <PackageReleaseNotes><![CDATA[
 Version 5.0.0
 * updating how Precompilation.Build resolves it's Workspaces dependency
+* retiring Precompilation.Metaprogramming
+* support running compilation modules at runtime in RoslynRazorViewEngine
 
 Version 4.7.0
 * updated roslyn packages to 2.7.0
