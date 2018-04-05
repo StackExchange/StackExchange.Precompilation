@@ -8,9 +8,9 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\StackExchange.Precompilation.Metaprogramming\StackExchange.Precompilation.Metaprogramming.csproj">
-      <Project>{e42f58d0-658f-4eb8-a031-45de998f769d}</Project>
-      <Name>StackExchange.Precompilation.Metaprogramming</Name>
+    <ProjectReference Include="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.csproj">
+      <Project>{31dfcccc-2f44-405e-a2d7-bb1ac718e7b9}</Project>
+      <Name>StackExchange.Precompilation.Build</Name>
     </ProjectReference>
     <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
       <Project>{3c0a90f1-b19e-4305-ab71-3cd31c7d0f4d}</Project>
@@ -23,7 +23,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.7.0" />
   </ItemGroup>
   <PropertyGroup>
-    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\$(TargetFramework)\</SEPrecompilerPath>
+    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\obj\$(Configuration)\$(TargetFramework)\</SEPrecompilerPath>
     <!-- Always precompile -->
     <SEPrecompilerIncludeRazor>true</SEPrecompilerIncludeRazor>
   </PropertyGroup>

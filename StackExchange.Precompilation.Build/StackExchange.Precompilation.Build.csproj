@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+<PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net462</TargetFramework>
     <AssemblyName>StackExchange.Precompiler</AssemblyName>
@@ -11,51 +11,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Web" />
-    <Reference Include="System.Configuration" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" IncludeAssets="compile" ExcludeAssets="analyzers" />
     <ProjectReference Include="..\StackExchange.Precompilation.Metaprogramming\StackExchange.Precompilation.Metaprogramming.csproj">
       <Project>{E42F58D0-658F-4EB8-A031-45DE998F769D}</Project>
       <Name>StackExchange.Precompilation.Metaprogramming</Name>
     </ProjectReference>
-    <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
-      <Project>{3c0a90f1-b19e-4305-ab71-3cd31c7d0f4d}</Project>
-      <Name>StackExchange.Precompilation</Name>
-    </ProjectReference>
     <None Include="*.targets" Pack="true" PackagePath="build" />
     <None Include="App.config" Pack="true" PackagePath="tools\$(AssemblyName).exe.config" />
   </ItemGroup>
-
-  <!-- don't copy stuff to bin folder, since that's what happens in when the nuget package is used too -->
-  <Target Name="RemoveReferences" AfterTargets="ResolveAssemblyReferences">
-    <ItemGroup>
-      <Reference Update="@(Reference)">
-        <Private>False</Private>
-      </Reference>
-      <ProjectReference Update="@(ProjectReference)">
-        <Private>False</Private>
-      </ProjectReference>
-    </ItemGroup>
-  </Target>
-
-  <!-- embed compile-time references into the assembly -->
-  <Target Name="EmbedReferences" AfterTargets="RemoveReferences">
-    <ItemGroup>
-      <EmbeddedReference Include="System.Composition.Runtime" />
-      <EmbeddedReference Include="System.Composition.Hosting" />
-      <EmbeddedReference Include="System.Composition.TypedParts" />
-      <EmbeddedReference Include="System.Composition.AttributedModel" />
-      <EmbeddedReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
-      <EmbeddedReference Include="Microsoft.CodeAnalysis.Workspaces" />
-      <EmbeddedReference Include="Microsoft.CodeAnalysis.Workspaces.Desktop" />
-      <!-- ... with a little bit of msbuild black magic -->
-      <_ReferencePath Include="@(Reference->'%(HintPath)')" Condition="'%(Reference.HintPath)' != ''" />
-      <_Reference_X_Embedded Include="@(_ReferencePath)">
-        <_Target>%(EmbeddedReference.Identity)</_Target>
-      </_Reference_X_Embedded>
-      <EmbeddedResource Include="%(_Reference_X_Embedded.Identity)" Condition="'%(_Reference_X_Embedded.FileName)' == '%(_Reference_X_Embedded._Target)'">
-        <LogicalName>embedded_ref://%(_Reference_X_Embedded._Target)</LogicalName>
-      </EmbeddedResource>
-    </ItemGroup>
-    <Message Text="Adding EmbeddedResource: %(EmbeddedResource.LogicalName) -&gt; %(EmbeddedResource.Identity)" />
-  </Target>
 </Project>

@@ -5,14 +5,14 @@
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <OutputType>Exe</OutputType>
     <TargetFramework>net462</TargetFramework>
-    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\net462\</SEPrecompilerPath>
+    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\obj\$(Configuration)\$(TargetFramework)\</SEPrecompilerPath>
     <PathMap>$(SolutionDir)\=https://example.org/</PathMap>
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
-      <Project>{3c0a90f1-b19e-4305-ab71-3cd31c7d0f4d}</Project>
-      <Name>StackExchange.Precompilation</Name>
+    <ProjectReference Include="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.csproj">
+      <Project>{31dfcccc-2f44-405e-a2d7-bb1ac718e7b9}</Project>
+      <Name>StackExchange.Precompilation.Build</Name>
     </ProjectReference>
     <ProjectReference Include="..\Test.Module\Test.Module.csproj">
       <Project>{5fcaecc3-787b-473f-a372-783d0c235190}</Project>

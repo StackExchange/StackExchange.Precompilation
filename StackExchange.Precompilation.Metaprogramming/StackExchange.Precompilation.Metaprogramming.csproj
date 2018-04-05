@@ -7,7 +7,6 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Configuration" />
     <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
       <Project>{3c0a90f1-b19e-4305-ab71-3cd31c7d0f4d}</Project>
       <Name>StackExchange.Precompilation</Name>
