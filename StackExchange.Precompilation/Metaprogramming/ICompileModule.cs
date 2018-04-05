@@ -8,7 +8,7 @@ namespace StackExchange.Precompilation
     ///     <code language="xml"><![CDATA[
     /// <configuration>
     ///   <configSections>
-    ///     <section name="stackExchange.precompiler" type="StackExchange.Precompilation.PrecompilerSection, StackExchange.Precompilation.Metaprogramming" />
+    ///     <section name="stackExchange.precompiler" type="StackExchange.Precompilation.PrecompilerSection, StackExchange.Precompilation" />
     ///   </configSections>
     ///   <stackExchange.precompiler>
     ///     <modules>

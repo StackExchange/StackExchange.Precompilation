@@ -82,8 +82,17 @@ namespace StackExchange.Precompilation
                 CscArgs = CSharpCommandLineParser.Default.Parse(_precompilationCommandLineArgs.Arguments, _precompilationCommandLineArgs.BaseDirectory, sdkDirectory);
                 Diagnostics = new List<Diagnostic>(CscArgs.Errors);
 
-                // load those before anything else hooks into our AssemlbyResolve...
-                var compilationModules = LoadModules().ToList();
+                // load those before anything else hooks into our AssemlbyResolve.
+                var loader = new PrecompilationModuleLoader(PrecompilerSection.Current);
+                loader.ModuleInitializationFailed += (module, ex) =>
+                {
+                    Diagnostics.Add(Diagnostic.Create(
+                        FailedToCreateModule,
+                        Location.Create(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile, new TextSpan(), new LinePositionSpan()),
+                        module.Type,
+                        ex.Message));
+                };
+                var compilationModules = loader.LoadedModules;
 
                 if (Diagnostics.Any())
                 {
@@ -317,34 +326,6 @@ namespace StackExchange.Precompilation
             //Console.WriteLine(projectInfo.CompilationOptions.SourceReferenceResolver.NormalizePath());
 
             return workspace.AddProject(projectInfo);
-        }
-
-        private IEnumerable<ICompileModule> LoadModules()
-        {
-            var compilationSection = PrecompilerSection.Current;
-            if (compilationSection == null) yield break;
-
-            foreach(var module in compilationSection.CompileModules.Cast<CompileModuleElement>())
-            {
-                ICompileModule compileModule = null;
-                try
-                {
-                    var type = Type.GetType(module.Type, true);
-                    compileModule = Activator.CreateInstance(type, true) as ICompileModule;
-                }
-                catch(Exception ex)
-                {
-                    Diagnostics.Add(Diagnostic.Create(
-                        FailedToCreateModule,
-                        Location.Create(AppDomain.CurrentDomain.SetupInformation.ConfigurationFile, new TextSpan(), new LinePositionSpan()),
-                        module.Type,
-                        ex.Message));
-                }
-                if (compileModule != null)
-                {
-                    yield return compileModule;
-                }
-            }
         }
 
         private RazorParser CreateRazorParser(Workspace workspace, CancellationToken cancellationToken)

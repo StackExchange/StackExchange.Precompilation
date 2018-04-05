@@ -4,9 +4,9 @@
     <TargetFramework>net462</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\StackExchange.Precompilation.Metaprogramming\StackExchange.Precompilation.Metaprogramming.csproj">
-      <Project>{E42F58D0-658F-4EB8-A031-45DE998F769D}</Project>
-      <Name>StackExchange.Precompilation.Metaprogramming</Name>
+    <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
+      <Project>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Project>
+      <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
   </ItemGroup>
 </Project>

@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilatio
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilation", "StackExchange.Precompilation\StackExchange.Precompilation.csproj", "{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilation.Metaprogramming", "StackExchange.Precompilation.Metaprogramming\StackExchange.Precompilation.Metaprogramming.csproj", "{E42F58D0-658F-4EB8-A031-45DE998F769D}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{5958EFE5-C8D6-4759-9A8E-8C64558314FD}"
 	ProjectSection(SolutionItems) = preProject
 		.nuget\NuGet.Config = .nuget\NuGet.Config
@@ -56,10 +54,6 @@ Global
 		{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E42F58D0-658F-4EB8-A031-45DE998F769D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E42F58D0-658F-4EB8-A031-45DE998F769D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E42F58D0-658F-4EB8-A031-45DE998F769D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E42F58D0-658F-4EB8-A031-45DE998F769D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5FCAECC3-787B-473F-A372-783D0C235190}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5FCAECC3-787B-473F-A372-783D0C235190}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5FCAECC3-787B-473F-A372-783D0C235190}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -22,5 +22,6 @@ namespace StackExchange.Precompilation
 
         [ConfigurationProperty("razorCache", IsRequired = false)]
         public RazorCacheElement RazorCache => (RazorCacheElement)base["razorCache"];
+
     }
 }

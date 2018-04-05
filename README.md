@@ -26,7 +26,7 @@ Meta-programming
 ----------------
 
 - Create a new project 
-- `Install-Package StackExchange.Precompilation.Metaprogramming -Pre`
+- `Install-Package StackExchange.Precompilation -Pre`
 - Implement the ICompileModule interface
 - `Install-Package StackExchange.Precompilation.Build -Pre` in the target project
 - [Configure your new module](https://github.com/StackExchange/StackExchange.Precompilation/blob/fd536b764983e2674a4549b7be6f26e971190c1e/Test.ConsoleApp/App.config#L8) in the target project's web.config or app.config
