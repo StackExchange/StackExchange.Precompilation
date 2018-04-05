@@ -6,6 +6,7 @@ using System;
 using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -63,6 +64,12 @@ namespace StackExchange.Precompilation
             };
         }
 
+        /// <summary>When set to <c>true</c>, configured <see cref="ICompileModule" />s are used when the views are compiled</summary>
+        public bool UseCompilationModules { get; set; }
+
+        private readonly ICompileModule[] _noModule = new ICompileModule[0];
+        private readonly PrecompilationModuleLoader _moduleLoader = new PrecompilationModuleLoader(PrecompilerSection.Current);
+
         /// <inheritdoc />
         protected override IVirtualPathFactory CreateVirtualPathFactory() => new PrecompilationVirtualPathFactory(
             runtime: this,
@@ -107,7 +114,7 @@ namespace StackExchange.Precompilation
                 var host = args.Host;
                 var razorResult = RunRazorGenerator(virtualPath, host);
                 var syntaxTree = GetSyntaxTree(host, razorResult);
-                var assembly = CompileToAssembly(host, syntaxTree);
+                var assembly = CompileToAssembly(host, syntaxTree, UseCompilationModules ? _moduleLoader.LoadedModules : _noModule);
                 return assembly.GetType($"{host.DefaultNamespace}.{host.DefaultClassName}");
             }
         }
@@ -176,32 +183,56 @@ namespace StackExchange.Precompilation
                     LazyThreadSafetyMode.ExecutionAndPublication)).Value;
         }
 
-        private static Assembly CompileToAssembly(WebPageRazorHost host, SyntaxTree syntaxTree)
+        private static Assembly CompileToAssembly(WebPageRazorHost host, SyntaxTree syntaxTree, ICollection<ICompileModule> compilationModules)
         {
+            var strArgs = new List<string>();
+            strArgs.Add("/target:library");
+            strArgs.Add(host.DefaultDebugCompilation ? "/o-" : "/o+");
+            strArgs.Add(host.DefaultDebugCompilation ? "/debug+" : "/debug-");
+
+            var cscArgs = CSharpCommandLineParser.Default.Parse(strArgs, null, null);
+
             var compilation = CSharpCompilation.Create(
                 "RoslynRazor", // Note: using a fixed assembly name, which doesn't matter as long as we don't expect cross references of generated assemblies
                 new[] { syntaxTree },
                 BuildManager.GetReferencedAssemblies().OfType<Assembly>().Select(ResolveReference),
-                new CSharpCompilationOptions(
-                    outputKind: OutputKind.DynamicallyLinkedLibrary,
-                    assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default,
-                    optimizationLevel: host.DefaultDebugCompilation ? OptimizationLevel.Debug : OptimizationLevel.Release));
+                cscArgs.CompilationOptions.WithAssemblyIdentityComparer(DesktopAssemblyIdentityComparer.Default));
 
             compilation = Hacks.MakeValueTuplesWorkWhenRunningOn47RuntimeAndTargetingNet45Plus(compilation);
+            var diagnostics = new List<Diagnostic>();
+            var context = new CompileContext(compilationModules);
+            context.Before(new BeforeCompileContext
+            {
+                Arguments = cscArgs,
+                Compilation = compilation,
+                Diagnostics = diagnostics,
+            });
+            compilation = context.BeforeCompileContext.Compilation;
 
             using (var dllStream = new MemoryStream())
             using (var pdbStream = new MemoryStream())
             {
                 EmitResult emitResult = compilation.Emit(dllStream, pdbStream);
+                diagnostics.AddRange(emitResult.Diagnostics);
 
                 if (!emitResult.Success)
                 {
-                    Diagnostic diagnostic = emitResult.Diagnostics.First(x => x.Severity == DiagnosticSeverity.Error);
+                    Diagnostic diagnostic = diagnostics.First(x => x.Severity == DiagnosticSeverity.Error);
                     string message = diagnostic.ToString();
                     LinePosition linePosition = diagnostic.Location.GetMappedLineSpan().StartLinePosition;
 
                     throw new HttpParseException(message, null, host.VirtualPath, null, linePosition.Line + 1);
                 }
+
+                context.After(new AfterCompileContext
+                {
+                    Arguments = context.BeforeCompileContext.Arguments,
+                    AssemblyStream = dllStream,
+                    Compilation = compilation,
+                    Diagnostics = diagnostics,
+                    SymbolStream = pdbStream,
+                    XmlDocStream = null,
+                });
 
                 return Assembly.Load(dllStream.GetBuffer(), pdbStream.GetBuffer());
             }

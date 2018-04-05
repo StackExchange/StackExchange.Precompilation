@@ -52,6 +52,10 @@
       <Project>{2ba24772-f7b0-4652-a430-2f4c2262e882}</Project>
       <Name>Test.WebApp.ExternalViews</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Test.Module\Test.Module.csproj">
+      <Project>{5fcaecc3-787b-473f-a372-783d0c235190}</Project>
+      <Name>Test.Module</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="**\*.cs" Exclude="obj\**\*" />

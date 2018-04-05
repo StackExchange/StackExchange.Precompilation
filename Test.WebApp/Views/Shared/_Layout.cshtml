@@ -9,7 +9,7 @@
         @RenderBody()
         <hr />
     </div>
-    @Html.ActionLink("Overridden layout", "IndexOverridden", new { controller = "Home" })
+    @Html.ActionLink("Overridden layout", "IndexOverridden", new { controller = "Home".Dump() })
     @Html.ActionLink("Excluded layout", "ExcludedLayout", new { controller = "Home" })
     @Html.Partial("_Footer", DateTime.Now)
     @Html.Partial("~/Content/PartialExternalContent.cshtml")

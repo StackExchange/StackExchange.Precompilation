@@ -385,43 +385,6 @@ namespace StackExchange.Precompilation
             }
         }
 
-        class CompileContext
-        {
-            private readonly ICompileModule[] _modules;
-            public BeforeCompileContext BeforeCompileContext { get; private set; }
-            public AfterCompileContext AfterCompileContext { get; private set; }
-            public CompileContext(IEnumerable<ICompileModule> modules)
-            {
-                _modules = modules == null ? new ICompileModule[0] : modules.ToArray();
-            }
-            public void Before(BeforeCompileContext context)
-            {
-                Apply(context, x => BeforeCompileContext = x, m => m.BeforeCompile);
-            }
-            public void After(AfterCompileContext context)
-            {
-                Apply(context, x => AfterCompileContext = x, m => m.AfterCompile);
-            }
-            private void Apply<TContext>(TContext ctx, Action<TContext> setter, Func<ICompileModule, Action<TContext>> actionGetter)
-                where TContext : ICompileContext
-            {
-                setter(ctx);
-                foreach(var module in _modules)
-                {
-                    try
-                    {
-                        var action = actionGetter(module);
-                        action(ctx);
-                    }
-                    catch (Exception ex)
-                    {
-                        var methodName = ctx is BeforeCompileContext ? nameof(ICompileModule.BeforeCompile) : nameof(ICompileModule.AfterCompile);
-                        throw new PrecompilationModuleException($"Precompilation module '{module.GetType().FullName}.{methodName}({typeof(TContext)})' failed", ex);
-                    }
-                }
-            }
-        }
-
         private sealed class NaiveReferenceResolver : MetadataReferenceResolver
         {
             private NaiveReferenceResolver() { }
@@ -442,13 +405,6 @@ namespace StackExchange.Precompilation
         public Location AsLocation(string path)
         {
             return Location.Create(path, new TextSpan(), new LinePositionSpan());
-        }
-
-        private class PrecompilationModuleException : Exception
-        {
-            public PrecompilationModuleException(string message, Exception inner) : base(message, inner)
-            {
-            }
         }
     }
 }

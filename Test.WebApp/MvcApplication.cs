@@ -39,7 +39,7 @@ namespace Test.WebApp
             ViewEngines.Engines.Add(new PrecompiledViewEngine(typeof(HomeController).Assembly, typeof(ExternalViews).Assembly));
 #endif
             // fallback to RoslynRazorViewEngine (RazorViewEngine doesn't support C# 6).
-            ViewEngines.Engines.Add(new RoslynRazorViewEngine());
+            ViewEngines.Engines.Add(new RoslynRazorViewEngine() { UseCompilationModules = true });
         }
     }
 }

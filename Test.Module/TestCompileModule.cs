@@ -11,6 +11,9 @@ namespace Test.Module
     {
         public void BeforeCompile(BeforeCompileContext context)
         {
+            // this can potentially run multiple times (for every view compiled at runtime) in RoslynRazorViewEngine;
+            if(context.Compilation.GetTypeByMetadataName("Test.Module.Extensions") != null) return;
+
             context.Diagnostics.Add(
                 Diagnostic.Create(
                     new DiagnosticDescriptor("TEST", "TEST", "Hello meta programming world!", "TEST", DiagnosticSeverity.Info, true),
