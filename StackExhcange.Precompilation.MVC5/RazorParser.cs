@@ -14,12 +14,21 @@ using System.Threading.Tasks;
 using System.Threading;
 using Microsoft.CodeAnalysis.Text;
 using RazorWorker = System.Func<System.Web.Razor.RazorEngineHost, Microsoft.CodeAnalysis.TextAndVersion, System.Threading.Tasks.Task<System.IO.Stream>>;
+using System.Composition;
+using Microsoft.CodeAnalysis.Host;
+using Microsoft.CodeAnalysis.Host.Mef;
 
 namespace StackExchange.Precompilation
 {
-    class RazorParser : IDisposable
+    [ExportLanguageServiceFactoryAttribute(typeof(IDocumentExtender), LanguageNames.CSharp)]
+    class RazorParserFactory : ILanguageServiceFactory
     {
-        private readonly Compilation _compilation;
+        public ILanguageService CreateLanguageService(HostLanguageServices languageServices) =>
+            new RazorParser(languageServices.WorkspaceServices.Workspace);
+    }
+
+    class RazorParser : IDocumentExtender, IDisposable
+    {
         private readonly Workspace _workspace;
         private readonly WebConfigurationFileMap _configMap;
         private readonly DirectoryInfo _cacheDirectory;
@@ -27,27 +36,23 @@ namespace StackExchange.Precompilation
         private readonly Lazy<Task> _backgroundWorkers;
         private readonly CancellationToken _cancellationToken;
 
-        public RazorParser(Workspace workspace, CancellationToken cancellationToken, Compilation compilation, DirectoryInfo cacheDirectory)
-            : this (workspace, cancellationToken, compilation)
+        public RazorParser(Workspace workspace)
         {
-            if (cacheDirectory == null)
-            {
-                throw new ArgumentNullException(nameof(cacheDirectory));
-            }
-            if (cacheDirectory.Exists != true)
-            {
-                throw new ArgumentException($"Specified directory '{cacheDirectory.FullName}' doesn't exist.", nameof(cacheDirectory));
-            }
-            _cacheDirectory = cacheDirectory;
-        }
+            var dir = PrecompilerSection.Current?.RazorCache?.Directory;
+//             dir = string.IsNullOrWhiteSpace(dir)
+//                 ? Environment.GetEnvironmentVariable(nameof(Precompilation) + "_" + nameof(PrecompilerSection.RazorCache) + nameof(RazorCacheElement.Directory))
+//                 : dir;
+//             if (!string.IsNullOrWhiteSpace(dir) && ! dir exists)
+//             Directory.CreateDirectory(Path.Combine(CscArgs.OutputDirectory, dir))
 
-        public RazorParser(Workspace workspace, CancellationToken cancellationToken, Compilation compilation)
-        {
+//             if (cacheDirectory.Exists != true)
+//             {
+//                 throw new ArgumentException($"Specified directory '{cacheDirectory.FullName}' doesn't exist.", nameof(cacheDirectory));
+//             }
+
             _workItems = new BlockingCollection<RazorTextLoader>();
             _workspace = workspace;
-            _compilation = compilation;
-            _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(compilation.CurrentDirectory.FullName, true) } } };
-            _cancellationToken = cancellationToken;
+            _configMap = new WebConfigurationFileMap { VirtualDirectories = { { "/", new VirtualDirectoryMapping(Environment.CurrentDirectory, true) } } };
             _backgroundWorkers = new Lazy<Task>(
                 () => _cancellationToken.IsCancellationRequested
                     ? Task.CompletedTask
@@ -68,7 +73,7 @@ namespace StackExchange.Precompilation
                 {
                     var originalText = await loader.OriginalLoader.LoadTextAndVersionAsync(_workspace, null, default(CancellationToken));
                     var viewFullPath = originalText.FilePath;
-                    var viewVirtualPath = GetRelativeUri(originalText.FilePath, _compilation.CurrentDirectory.FullName);
+                    var viewVirtualPath = GetRelativeUri(originalText.FilePath, Environment.CurrentDirectory);
                     var viewConfig = WebConfigurationManager.OpenMappedWebConfiguration(_configMap, viewVirtualPath);
                     var host = viewConfig.GetSectionGroup("system.web.webPages.razor") is RazorWebSectionGroup razorConfig
                         ? WebRazorHostFactory.CreateHostFromConfig(razorConfig, viewVirtualPath, viewFullPath)
@@ -84,7 +89,7 @@ namespace StackExchange.Precompilation
                     using (var stream = await worker(host, originalText))
                     {
                         var generatedText = TextAndVersion.Create(
-                            SourceText.From(stream, _compilation.Encoding, _compilation.CscArgs.ChecksumAlgorithm, canBeEmbedded: originalText.Text.CanBeEmbedded, throwIfBinaryDetected: true),
+                            SourceText.From(stream, originalText.Text.Encoding, originalText.Text.ChecksumAlgorithm, canBeEmbedded: originalText.Text.CanBeEmbedded, throwIfBinaryDetected: true),
                             originalText.Version,
                             originalText.FilePath);
 
@@ -176,14 +181,8 @@ namespace StackExchange.Precompilation
                 }
             }
         }
-
-        private void ReportDiagnostic(Diagnostic d)
-        {
-            lock (_compilation.Diagnostics)
-            {
-                _compilation.Diagnostics.Add(d);
-            }
-        }
+        private readonly ConcurrentBag<Diagnostic> _diagnostics = new ConcurrentBag<Diagnostic>();
+        private void ReportDiagnostic(Diagnostic d) => _diagnostics.Add(d);
 
         private Task<Stream> RazorWorker(RazorEngineHost host, TextAndVersion originalText) =>
             RazorWorkerImpl(host, originalText).ContinueWith(x => x.Result.result, TaskContinuationOptions.OnlyOnRanToCompletion);
@@ -193,9 +192,9 @@ namespace StackExchange.Precompilation
             var success = true;
             var generatedStream = new MemoryStream(capacity: originalText.Text.Length * 8); // generated .cs files contain a lot of additional crap vs actualy cshtml
             var viewFullPath = originalText.FilePath;
-            using (var sourceReader = new StreamReader(generatedStream, _compilation.Encoding, false, 4096, leaveOpen: true))
+            using (var sourceReader = new StreamReader(generatedStream, originalText.Text.Encoding, false, 4096, leaveOpen: true))
             using (var provider = CodeDomProvider.CreateProvider("csharp"))
-            using (var generatedWriter = new StreamWriter(generatedStream, _compilation.Encoding, 4096, leaveOpen: true))
+            using (var generatedWriter = new StreamWriter(generatedStream, originalText.Text.Encoding, 4096, leaveOpen: true))
             {
                 // write cshtml into generated stream and rewind
                 originalText.Text.Write(generatedWriter);
@@ -257,24 +256,23 @@ namespace StackExchange.Precompilation
             return "/" + folderUri.MakeRelativeUri(pathUri).ToString().TrimStart('/');
         }
 
-        public DocumentInfo Wrap(DocumentInfo document)
+        public DocumentInfo Extend(DocumentInfo document)
         {
+            if (Path.GetExtension(document.Name) != ".cshtml") return document;
+
             var razorLoader = new RazorTextLoader(this, document.TextLoader);
             _workItems.Add(razorLoader);
             return document.WithTextLoader(razorLoader);
         }
 
-        public Task Complete()
+        public async Task<System.Collections.Generic.ICollection<Diagnostic>> Complete()
         {
             _workItems.CompleteAdding();
             if (_backgroundWorkers.IsValueCreated || !_workItems.IsCompleted)
             {
-                return _backgroundWorkers.Value;
+                await _backgroundWorkers.Value;
             }
-            else
-            {
-                return Task.CompletedTask;
-            }
+            return _diagnostics.ToList();
         }
 
         private Task EnsureWorkers() => _backgroundWorkers.Value;

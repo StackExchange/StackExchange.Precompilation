@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.22823.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2015
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilation.Build", "StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.csproj", "{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation.Build", "StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.csproj", "{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilation", "StackExchange.Precompilation\StackExchange.Precompilation.csproj", "{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation", "StackExchange.Precompilation\StackExchange.Precompilation.csproj", "{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{5958EFE5-C8D6-4759-9A8E-8C64558314FD}"
 	ProjectSection(SolutionItems) = preProject
@@ -14,14 +14,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{5958EF
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.Module", "Test.Module\Test.Module.csproj", "{5FCAECC3-787B-473F-A372-783D0C235190}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Module", "Test.Module\Test.Module.csproj", "{5FCAECC3-787B-473F-A372-783D0C235190}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.ConsoleApp", "Test.ConsoleApp\Test.ConsoleApp.csproj", "{BA716DA2-4E3C-4D9F-B9C2-78C0EAEF66D7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.ConsoleApp", "Test.ConsoleApp\Test.ConsoleApp.csproj", "{BA716DA2-4E3C-4D9F-B9C2-78C0EAEF66D7}"
 	ProjectSection(ProjectDependencies) = postProject
 		{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9} = {31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WebApp", "Test.WebApp\Test.WebApp.csproj", "{5B0105A4-256B-4A88-852C-6F5E9D185515}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.WebApp", "Test.WebApp\Test.WebApp.csproj", "{5B0105A4-256B-4A88-852C-6F5E9D185515}"
 	ProjectSection(ProjectDependencies) = postProject
 		{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9} = {31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}
 	EndProjectSection
@@ -33,12 +33,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		semver.txt = semver.txt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackExchange.Precompilation.Tests", "StackExchange.Precompilation.Tests\StackExchange.Precompilation.Tests.csproj", "{B6306D9B-0770-44DF-AADE-5703B1DCFD67}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation.Tests", "StackExchange.Precompilation.Tests\StackExchange.Precompilation.Tests.csproj", "{B6306D9B-0770-44DF-AADE-5703B1DCFD67}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test.WebApp.ExternalViews", "Test.WebApp.ExternalViews\Test.WebApp.ExternalViews.csproj", "{2BA24772-F7B0-4652-A430-2F4C2262E882}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.WebApp.ExternalViews", "Test.WebApp.ExternalViews\Test.WebApp.ExternalViews.csproj", "{2BA24772-F7B0-4652-A430-2F4C2262E882}"
 	ProjectSection(ProjectDependencies) = postProject
 		{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9} = {31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation.MVC5", "StackExhcange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj", "{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -74,8 +76,15 @@ Global
 		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2BA24772-F7B0-4652-A430-2F4C2262E882}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {153D37EE-CF3F-42D8-9703-EE953797B3A9}
 	EndGlobalSection
 EndGlobal
