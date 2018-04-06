@@ -8,35 +8,22 @@
     <IsTool>true</IsTool>
     <IsPackable>true</IsPackable>
     <PackageId>StackExchange.Precompilation.Build</PackageId>
+    <BeforePack>_ToolsSetup;$(BeforePack)</BeforePack>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj">
       <Project>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Project>
       <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" IncludeAssets="compile" ExcludeAssets="analyzers" />
-    <None Include="*.targets" Pack="true" PackagePath="build" />
-    <None Include="App.config" Pack="true" PackagePath="tools\$(AssemblyName).exe.config" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" PrivateAssets="all" />
   </ItemGroup>
 
-  <!--
-    Embed net462 specific compile(-run)-time references into the assembly.
-    This becomes a tool package, and the tool can run when compiling/targeting netstandard, at which point
-    we'd be missing references for the desktop specific workspace stuff (e.g CommandLineProject etc...) required
-    for running the tool.
-  -->
-  <Target Name="EmbedReferences" AfterTargets="ResolveAssemblyReferences">
+  <Target Name="_ToolsSetup">
     <ItemGroup>
-      <EmbeddedReference Include="Microsoft.CodeAnalysis.Workspaces.Desktop" />
-      <!-- ... with a little bit of msbuild black magic -->
-      <_ReferencePath Include="@(Reference->'%(HintPath)')" Condition="'%(Reference.HintPath)' != ''" />
-      <_Reference_X_Embedded Include="@(_ReferencePath)">
-        <_Target>%(EmbeddedReference.Identity)</_Target>
-      </_Reference_X_Embedded>
-      <EmbeddedResource Include="%(_Reference_X_Embedded.Identity)" Condition="'%(_Reference_X_Embedded.FileName)' == '%(_Reference_X_Embedded._Target)'">
-        <LogicalName>embedded_ref://%(_Reference_X_Embedded._Target)</LogicalName>
-      </EmbeddedResource>
+      <_BinOutputs Include="bin\$(Configuration)\$(TargetFramework)\*.*"  />
+      <None Include="@(_BinOutputs)" Pack="true" PackagePath="tools\%(Filename)%(Extension)" Condition="'%(Extension)' == '.dll' or '%(Extension)' == '.pdb' or '%(Extension)' == '.config'" />
+      <None Include="*.targets" Pack="true" PackagePath="build" />
     </ItemGroup>
-    <Message Text="Adding EmbeddedResource: %(EmbeddedResource.LogicalName) -&gt; %(EmbeddedResource.Identity)" />
   </Target>
+
 </Project>

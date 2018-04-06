@@ -33,27 +33,15 @@ namespace StackExchange.Precompilation
                 resolvedAssemblies.AddOrUpdate(keyName.Name, resolved, (key, existing) => existing); // TODO log conflicting partial binds?
             }
 
-            // load the embedded compile-time references, we're gonna need them for sure
-            const string prefix = "embedded_ref://";
-            var thisAssembly = typeof(CompilationAssemblyResolver).Assembly;
-            thisAssembly.GetManifestResourceNames()
+            // load runtime references from tools/*.dll
+
+            var location = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            Directory.EnumerateFiles(location, "*.dll")
                 .AsParallel()
-                .Where(x => x.StartsWith(prefix))
-                .ForAll(resourceKey =>
+                .ForAll(dll =>
                 {
-                    using (var resource = thisAssembly.GetManifestResourceStream(resourceKey))
-                    using (var ms = new MemoryStream())
-                    {
-                        if (resource != null)
-                        {
-                            resource.CopyTo(ms);
-                            var rawAssembly = ms.ToArray();
-                            var assembly = Assembly.Load(rawAssembly);
-                            var name = assembly.GetName();
-                            name.CodeBase = resourceKey;
-                            Resolve(name, () => assembly);
-                        }
-                    }
+                    var assemblyName = AssemblyName.GetAssemblyName(dll);
+                    Resolve(assemblyName, () => Assembly.LoadFile(dll));
                 });
 
             // load all the other references

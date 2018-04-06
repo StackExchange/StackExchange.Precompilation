@@ -84,7 +84,7 @@
   </ProjectExtensions>
 
   <PropertyGroup>
-    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\obj\$(Configuration)\$(TargetFramework)\</SEPrecompilerPath>
+    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\$(TargetFramework)\</SEPrecompilerPath>
     <!-- Using DEBUG build configuration to test RoslynRazorViewEngine in VS, SECompilerPath is set in the build script  -->
     <SEPrecompilerIncludeRazor Condition="'$(Configuration)' == 'Release' or '(SECompilerPath)' != ''">true</SEPrecompilerIncludeRazor>
   </PropertyGroup>
