@@ -7,7 +7,7 @@
     <TargetFrameworks>net462;netcoreapp20</TargetFrameworks>
     <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
     <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\net462\</SEPrecompilerPath>
-    <PathMap>$(SolutionDir)\=https://example.org/</PathMap>
+    <PathMap>$(SolutionDir)=https://example.org/</PathMap>
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
