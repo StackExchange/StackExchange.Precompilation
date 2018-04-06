@@ -31,6 +31,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation.Tests", "StackExchange.Precompilation.Tests\StackExchange.Precompilation.Tests.csproj", "{B6306D9B-0770-44DF-AADE-5703B1DCFD67}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3} = {C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}
+		{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D} = {3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.WebApp.ExternalViews", "Test.WebApp.ExternalViews\Test.WebApp.ExternalViews.csproj", "{2BA24772-F7B0-4652-A430-2F4C2262E882}"
 	ProjectSection(ProjectDependencies) = postProject
