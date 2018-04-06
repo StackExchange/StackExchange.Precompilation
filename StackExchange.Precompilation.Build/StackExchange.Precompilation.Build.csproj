@@ -18,4 +18,25 @@
     <None Include="*.targets" Pack="true" PackagePath="build" />
     <None Include="App.config" Pack="true" PackagePath="tools\$(AssemblyName).exe.config" />
   </ItemGroup>
+
+  <!--
+    Embed net462 specific compile(-run)-time references into the assembly.
+    This becomes a tool package, and the tool can run when compiling/targeting netstandard, at which point
+    we'd be missing references for the desktop specific workspace stuff (e.g CommandLineProject etc...) required
+    for running the tool.
+  -->
+  <Target Name="EmbedReferences" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <EmbeddedReference Include="Microsoft.CodeAnalysis.Workspaces.Desktop" />
+      <!-- ... with a little bit of msbuild black magic -->
+      <_ReferencePath Include="@(Reference->'%(HintPath)')" Condition="'%(Reference.HintPath)' != ''" />
+      <_Reference_X_Embedded Include="@(_ReferencePath)">
+        <_Target>%(EmbeddedReference.Identity)</_Target>
+      </_Reference_X_Embedded>
+      <EmbeddedResource Include="%(_Reference_X_Embedded.Identity)" Condition="'%(_Reference_X_Embedded.FileName)' == '%(_Reference_X_Embedded._Target)'">
+        <LogicalName>embedded_ref://%(_Reference_X_Embedded._Target)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+    <Message Text="Adding EmbeddedResource: %(EmbeddedResource.LogicalName) -&gt; %(EmbeddedResource.Identity)" />
+  </Target>
 </Project>

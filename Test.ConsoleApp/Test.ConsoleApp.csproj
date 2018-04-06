@@ -4,22 +4,25 @@
   <PropertyGroup>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net462</TargetFramework>
-    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\obj\$(Configuration)\$(TargetFramework)\</SEPrecompilerPath>
+    <TargetFrameworks>net462;netcoreapp20</TargetFrameworks>
+    <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
+    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\obj\$(Configuration)\net462\</SEPrecompilerPath>
     <PathMap>$(SolutionDir)\=https://example.org/</PathMap>
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.csproj">
-      <Project>{31dfcccc-2f44-405e-a2d7-bb1ac718e7b9}</Project>
-      <Name>StackExchange.Precompilation.Build</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Test.Module\Test.Module.csproj">
       <Project>{5fcaecc3-787b-473f-a372-783d0c235190}</Project>
       <Name>Test.Module</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System.Data" Aliases="aliastest" />
+    <Reference Include="System.Data" Aliases="aliastest" Condition="'$(TargetFramework)' == 'net462'" />
+
+    <!-- Usually, this would be pulled in by the reference to StackExchange.Precompilation.Build nuget,
+         but since we don't have the package yet, msbuild complains about the .csproj not targeting netstandard,
+         so we're pulling it's references in manually.
+     -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" IncludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>
 </Project>
