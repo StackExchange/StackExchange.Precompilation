@@ -91,7 +91,7 @@
     <!-- Using DEBUG build configuration to test RoslynRazorViewEngine in VS, SECompilerPath is set in the build script  -->
     <SEPrecompilerIncludeRazor Condition="'$(Configuration)' == 'Release' or '(SECompilerPath)' != ''">true</SEPrecompilerIncludeRazor>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
+  <Import Project="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
 
   <Target Name="Pack">
     <!-- this target is just a dummy to enable the pack target solution wide, since this is the only non-SDK project in the solution -->

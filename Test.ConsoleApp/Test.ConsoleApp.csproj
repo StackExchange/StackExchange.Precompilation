@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
   <PropertyGroup>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <OutputType>Exe</OutputType>
@@ -25,4 +24,5 @@
      -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" IncludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>
+  <Import Project="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
 </Project>
