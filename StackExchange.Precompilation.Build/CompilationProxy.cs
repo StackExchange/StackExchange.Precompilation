@@ -23,6 +23,7 @@ namespace StackExchange.Precompilation
                     ApplicationName = currentSetup.ApplicationName,
                     ApplicationBase = currentSetup.ApplicationBase,
                     ConfigurationFile = precompilationArgs.AppConfig,
+                    DisallowBindingRedirects = true,
                 };
 
                 if (setup.ConfigurationFile == null)
