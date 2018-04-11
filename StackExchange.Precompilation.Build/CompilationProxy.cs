@@ -43,7 +43,6 @@ namespace StackExchange.Precompilation
                     Console.WriteLine("error: " + e);
                 };
 
-                var assemblyExt = new HashSet<string> { ".dll", ".exe" };
                 var references = precompilationArgs.References; //.Concat(Directory.EnumerateFiles(AppDomain.CurrentDomain.BaseDirectory).Where(r => assemblyExt.Contains(Path.GetExtension(r)))).ToArray()
                 CompilationAssemblyResolver.Register(compilationDomain, references);
 
