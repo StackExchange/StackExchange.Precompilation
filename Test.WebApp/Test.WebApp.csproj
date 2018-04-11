@@ -62,6 +62,7 @@
   <ItemGroup>
     <Compile Include="**\*.cs" Exclude="obj\**\*" />
     <Content Include="**\*.cshtml" Exclude="Views\Home\ExcludedLayout.cshtml" />
+    <None Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Web" />
