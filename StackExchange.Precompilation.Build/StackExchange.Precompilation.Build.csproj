@@ -8,6 +8,7 @@
     <IsTool>true</IsTool>
     <IsPackable>true</IsPackable>
     <PackageId>StackExchange.Precompilation.Build</PackageId>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <BeforePack>_ToolsSetup;$(BeforePack)</BeforePack>
   </PropertyGroup>
   <ItemGroup>
