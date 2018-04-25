@@ -17,6 +17,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.Module", "Test.Module\Test.Module.csproj", "{5FCAECC3-787B-473F-A372-783D0C235190}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.ConsoleApp", "Test.ConsoleApp\Test.ConsoleApp.csproj", "{BA716DA2-4E3C-4D9F-B9C2-78C0EAEF66D7}"
+	ProjectSection(ProjectDependencies) = postProject
+		{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9} = {31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.WebApp", "Test.WebApp\Test.WebApp.csproj", "{5B0105A4-256B-4A88-852C-6F5E9D185515}"
 	ProjectSection(ProjectDependencies) = postProject
