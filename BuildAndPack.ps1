@@ -29,7 +29,7 @@ if(-not $GitCommitId)
 }
 
 $solutionDir = "$((Resolve-Path .).Path)\"
-$defaultArgs = "/v:n", "/m", "/nologo",
+$defaultArgs = "/v:n", "/nologo",
     "/p:SolutionDir=$solutionDir",
     "/p:PathMap=$solutionDir=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation/$GitCommitId/",
     "/p:Version=$version",
