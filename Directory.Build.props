@@ -20,6 +20,7 @@ Version 5.0.0
 * support running compilation modules at runtime in RoslynRazorViewEngine
 * split out System.Web / MVC5 portions into a separate package
 * bumping aspnet mvc packages to 5.2.4
+* updating roslyn packages to 2.8.0
 
 Version 4.7.0
 * updated roslyn packages to 2.7.0
