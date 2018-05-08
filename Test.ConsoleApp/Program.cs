@@ -16,8 +16,8 @@ namespace Test.ConsoleApp
 
         // path mapping test, configured via <PathMap> property in the .csproj
         static string PathMapTest([CallerFilePath] string path = null) =>
-            path.StartsWith("https://example.org/")
+            path.StartsWith("X:\\Test\\")
                 ? path
-                : throw new InvalidOperationException($"CallerFilePath was expected to start with https://example.org/ but was {path}.");
+                : throw new InvalidOperationException($"CallerFilePath was expected to start with X:\\Test\\ but was {path}.");
     }
 }
