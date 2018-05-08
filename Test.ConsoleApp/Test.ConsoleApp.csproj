@@ -22,7 +22,7 @@
          but since we don't have the package yet, msbuild complains about the .csproj not targeting netstandard,
          so we're pulling it's references in manually.
      -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.7.0" IncludeAssets="compile" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.8.0" IncludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>
   <Import Project="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
 </Project>
