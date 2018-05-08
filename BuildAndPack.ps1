@@ -31,7 +31,7 @@ if(-not $GitCommitId)
 $solutionDir = "$((Resolve-Path .).Path)\"
 $defaultArgs = "/v:n", "/nologo",
     "/p:SolutionDir=$solutionDir",
-    "/p:RepositoryCommit=$GitCommitId"
+    "/p:RepositoryCommit=$GitCommitId",
     "/p:Version=$version",
     "/p:Configuration=Release",
     "/p:SEPrecompilerPath=$solutionDir\StackExchange.Precompilation.Build\bin\Release\net462"
@@ -45,4 +45,11 @@ if ($MsBuildArgs)
 if ($LastExitCode -ne 0)
 {
     throw "MSBuild failed"
+}
+
+.\Test.ConsoleApp\bin\Release\net462\Test.ConsoleApp.exe
+
+if ($LastExitCode -ne 0)
+{
+    throw "Test.ConsoleApp failed to run"
 }
