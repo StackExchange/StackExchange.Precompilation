@@ -31,7 +31,7 @@ if(-not $GitCommitId)
 $solutionDir = "$((Resolve-Path .).Path)\"
 $defaultArgs = "/v:n", "/nologo",
     "/p:SolutionDir=$solutionDir",
-    "/p:PathMap=$solutionDir=https://raw.githubusercontent.com/StackExchange/StackExchange.Precompilation/$GitCommitId/",
+    "/p:RepositoryCommit=$GitCommitId"
     "/p:Version=$version",
     "/t:Restore,Build,Pack",
     "/p:Configuration=Release",

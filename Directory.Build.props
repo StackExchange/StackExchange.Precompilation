@@ -11,7 +11,8 @@
     <Authors>m0sa</Authors>
     <Copyright>Stack Exchange 2017</Copyright>
     <PackageTags>Razor AspNet MsBuild Roslyn Metaprogramming</PackageTags>
-    <RepositoryUrl>https://github.com/StackExchange/StackExchange.Precompilation</RepositoryUrl>
+    <RepositoryUrl>https://github.com/StackExchange/StackExchange.Precompilation.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
     <ProjectUrl>https://github.com/StackExchange/StackExchange.Precompilation</ProjectUrl>
     <PackageReleaseNotes><![CDATA[
 Version 5.0.0
