@@ -17,6 +17,7 @@
       <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.10.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.DiaSymReader.Native" Version="1.7.0" PrivateAssets="all" />
   </ItemGroup>
 
   <Target Name="_ToolsSetup">
