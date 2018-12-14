@@ -15,6 +15,10 @@
     <RepositoryType>git</RepositoryType>
     <ProjectUrl>https://github.com/StackExchange/StackExchange.Precompilation</ProjectUrl>
     <PackageReleaseNotes><![CDATA[
+Version 5.1.0
+* updating roslyn packages to 2.10.0
+* updating mvc packages to 5.2.7
+
 Version 5.0.0
 * updating how Precompilation.Build resolves it's Workspaces dependency
 * retiring Precompilation.Metaprogramming

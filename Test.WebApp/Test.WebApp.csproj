@@ -26,6 +26,7 @@
     <UseGlobalApplicationHostFile />
     <TargetFrameworkProfile />
     <RuntimeIdentifiers>win</RuntimeIdentifiers>
+    <DependsOnNETStandard>false</DependsOnNETStandard><!-- lies -->
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -58,6 +59,7 @@
       <Project>{5fcaecc3-787b-473f-a372-783d0c235190}</Project>
       <Name>Test.Module</Name>
     </ProjectReference>
+    <Reference Include="netstandard" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="**\*.cs" Exclude="obj\**\*" />
@@ -67,9 +69,9 @@
   <ItemGroup>
     <Reference Include="System.Web" />
     <Reference Include="Microsoft.CSharp" />
-    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.2.4" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.8.2" />
-    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
+    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.2.7" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.10.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <PackageReference Include="MSBuild.Microsoft.VisualStudio.Web.targets" Version="14.0.0.3" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

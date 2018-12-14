@@ -8,10 +8,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Web" />
-    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.2.4" />
+    <PackageReference Include="Microsoft.AspNet.Mvc" Version="5.2.7" />
     <ProjectReference Include="..\StackExchange.Precompilation\StackExchange.Precompilation.csproj" />
 
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.8.2" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.10.0" PrivateAssets="all" />
     <ProjectReference Include="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.csproj" IncludeAssets="compile" PrivateAssets="all" />
   </ItemGroup>
 </Project>

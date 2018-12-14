@@ -40,8 +40,15 @@ namespace StackExchange.Precompilation
                 .AsParallel()
                 .ForAll(dll =>
                 {
-                    var assemblyName = AssemblyName.GetAssemblyName(dll);
-                    Resolve(assemblyName, () => Assembly.LoadFile(dll));
+                    try
+                    {
+                        var assemblyName = AssemblyName.GetAssemblyName(dll);
+                        Resolve(assemblyName, () => Assembly.LoadFile(dll));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("hidden: failed to resolve assembly {0}: {1}", dll, ex.Message);
+                    }
                 });
 
             // load all the other references
