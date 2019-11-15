@@ -50,7 +50,7 @@
       <Project>{3C0A90F1-B19E-4305-AB71-3CD31C7D0F4D}</Project>
       <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
-    <ProjectReference Include="..\StackExhcange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj" />
+    <ProjectReference Include="..\StackExchange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj" />
     <ProjectReference Include="..\Test.WebApp.ExternalViews\Test.WebApp.ExternalViews.csproj">
       <Project>{2ba24772-f7b0-4652-a430-2f4c2262e882}</Project>
       <Name>Test.WebApp.ExternalViews</Name>

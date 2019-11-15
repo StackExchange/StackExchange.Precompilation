@@ -42,7 +42,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Test.WebApp.ExternalViews",
 		{31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9} = {31DFCCCC-2F44-405E-A2D7-BB1AC718E7B9}
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation.MVC5", "StackExhcange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj", "{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StackExchange.Precompilation.MVC5", "StackExchange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj", "{C8F659BD-D0D1-4404-9CC5-3F14ED4B28F3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

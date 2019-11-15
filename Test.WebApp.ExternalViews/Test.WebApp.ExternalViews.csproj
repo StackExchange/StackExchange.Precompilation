@@ -16,7 +16,7 @@
       <Project>{3c0a90f1-b19e-4305-ab71-3cd31c7d0f4d}</Project>
       <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
-    <ProjectReference Include="..\StackExhcange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj" />
+    <ProjectReference Include="..\StackExchange.Precompilation.MVC5\StackExchange.Precompilation.MVC5.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Web" />
