@@ -34,7 +34,7 @@ $defaultArgs = "/v:n", "/nologo",
     "/p:RepositoryCommit=$GitCommitId",
     "/p:Version=$version",
     "/p:Configuration=Release",
-    "/p:SEPrecompilerPath=$solutionDir\StackExchange.Precompilation.Build\bin\Release\net462"
+    "/p:SEPrecompilerPath=$solutionDir\StackExchange.Precompilation.Build\bin\Release\net472"
 if ($MsBuildArgs)
 {
     $defaultArgs += $MsBuildArgs
@@ -47,7 +47,7 @@ if ($LastExitCode -ne 0)
     throw "MSBuild failed"
 }
 
-.\Test.ConsoleApp\bin\Release\net462\Test.ConsoleApp.exe
+.\Test.ConsoleApp\bin\Release\net472\Test.ConsoleApp.exe
 
 if ($LastExitCode -ne 0)
 {

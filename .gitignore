@@ -10,3 +10,4 @@ tools
 packages
 .vs
 _ReSharper*
+.idea

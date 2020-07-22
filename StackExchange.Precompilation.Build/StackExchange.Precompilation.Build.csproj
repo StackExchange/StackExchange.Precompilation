@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net462</TargetFramework>
+    <TargetFramework>net472</TargetFramework>
     <AssemblyName>StackExchange.Precompiler</AssemblyName>
     <Description>Replaces CSC and aspnet_compiler.exe with StackExchange.Precompiler for compiling C# (.cs) and Razor View (.cshtml) files in asp.net mvc 5 projects.</Description>
     <IsTool>true</IsTool>
@@ -16,13 +16,14 @@
       <Project>{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</Project>
       <Name>StackExchange.Precompilation</Name>
     </ProjectReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.10.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="3.6.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.6.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.DiaSymReader.Native" Version="1.7.0" PrivateAssets="all" />
   </ItemGroup>
 
   <Target Name="_ToolsSetup">
     <ItemGroup>
-      <_BinOutputs Include="bin\$(Configuration)\$(TargetFramework)\*.*"  />
+      <_BinOutputs Include="bin\$(Configuration)\$(TargetFramework)\*.*" />
       <None Include="@(_BinOutputs)" Pack="true" PackagePath="tools\%(Filename)%(Extension)" Condition="'%(Extension)' == '.dll' or '%(Extension)' == '.pdb' or '%(Extension)' == '.config'" />
       <None Include="*.targets" Pack="true" PackagePath="build" />
     </ItemGroup>

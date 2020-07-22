@@ -15,6 +15,11 @@
     <RepositoryType>git</RepositoryType>
     <ProjectUrl>https://github.com/StackExchange/StackExchange.Precompilation</ProjectUrl>
     <PackageReleaseNotes><![CDATA[
+Version 6.0.0
+* updating roslyn packages to 3.6.0
+* target .NET Framework 4.7.2 / .NET standard 2.1
+
+
 Version 5.1.0
 * updating roslyn packages to 2.10.0
 * updating mvc packages to 5.2.7

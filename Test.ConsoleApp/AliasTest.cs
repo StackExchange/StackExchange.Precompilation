@@ -1,4 +1,4 @@
-﻿#if NET462
+﻿#if NET472
 extern alias aliastest;
 
 namespace Test.ConsoleApp
