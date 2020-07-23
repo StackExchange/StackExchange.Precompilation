@@ -3,11 +3,12 @@
   <PropertyGroup>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net462;netcoreapp20</TargetFrameworks>
+    <TargetFrameworks>net472;netcoreapp3.1</TargetFrameworks>
     <RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>
-    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\net462\</SEPrecompilerPath>
+    <SEPrecompilerPath Condition="'$(SEPrecompilerPath)' == ''">$(SolutionDir)StackExchange.Precompilation.Build\bin\$(Configuration)\net472\</SEPrecompilerPath>
     <PathMap>$(SolutionDir)=X:\Test\</PathMap>
     <DebugType>portable</DebugType>
+    <LangVersion>8</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Test.Module\Test.Module.csproj">
@@ -16,15 +17,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="System.Data" Aliases="aliastest" Condition="'$(TargetFramework)' == 'net462'" />
+    <Reference Include="System.Data" Aliases="aliastest" Condition="'$(TargetFramework)' == 'net472'" />
 
     <!-- Usually, this would be pulled in by the reference to StackExchange.Precompilation.Build nuget,
          but since we don't have the package yet, msbuild complains about the .csproj not targeting netstandard,
          so we're pulling it's references in manually.
      -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="2.10.0" IncludeAssets="compile" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.6.0" IncludeAssets="compile" PrivateAssets="all" />
 
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
   </ItemGroup>
   <Import Project="..\StackExchange.Precompilation.Build\StackExchange.Precompilation.Build.targets" />
 </Project>

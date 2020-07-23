@@ -9,7 +9,7 @@ namespace Test.ConsoleApp
         static void Main(string[] args)
         {
             Console.WriteLine(PathMapTest().Dump());
-#if NET462
+#if NET472
             Console.WriteLine(typeof(AliasTest).FullName);
 #endif
         }
